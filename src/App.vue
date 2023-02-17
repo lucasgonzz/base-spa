@@ -30,11 +30,10 @@ export default {
                     this.$router.replace({name: 'login'})
                 } 
             } else {
-                if (this.route_name != this.route_index) {
-                    this.$router.replace({name: this.route_index})
-                }
+                this.hasPermissionForRoute()
                 this.callMethods([
-                    'product'
+                    'product',
+                    'permission',
                 ])
             }
         }

@@ -28,7 +28,7 @@ export default {
 			}
 		},
 	],
-	singular_model_name_spanish: 'Vennta',
+	singular_model_name_spanish: 'Venta',
 	plural_model_name_spanish: 'Ventas',
 	create_model_name_spanish: 'Nueva',
 	text_delete: 'la',

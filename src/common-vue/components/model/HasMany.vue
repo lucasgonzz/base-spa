@@ -1,10 +1,10 @@
 <template>
 	<div
 	class="m-l-15">
-
 		<model-component
 		:has_many_parent_model="parent_model"
-		:has_many_prop_name="prop.key"
+		:has_many_parent_model_name="parent_model_name"
+		:has_many_prop="prop"
 		:model_name="prop.has_many.model_name"></model-component>	
 
 	    <confirm
@@ -18,11 +18,12 @@
 	    :model_name="prop.has_many.model_name"></table-component>
 	    
 		<b-button
+		v-if="!prop.has_many.models_from_parent_prop"
 		class="m-t-15" 
 		@click="create(prop.has_many.model_name, parent_model)"
 		size="sm"
 		variant="outline-primary">
-			Agregar {{ prop.has_many.text }}
+			Agregar {{ singular(prop.has_many.model_name) }}
 		</b-button>
 	</div>
 </template>
@@ -32,9 +33,7 @@ import TableComponent from '@/common-vue/components/display/TableComponent'
 
 import Confirm from '@/common-vue/components/Confirm'
 
-import display from '@/common-vue/mixins/display'
 export default {
-	mixins: [display],
 	name: 'HasMany',
 	props: {
 		prop: Object,
@@ -71,13 +70,6 @@ export default {
 			this.$set(this.parent_model, this.prop.key, this.parent_model[this.prop.key].concat([model_to_add]))
 		},
 		deleteModel(model) {
-			let model_to_send = {
-				...this.prop,
-				id: model.id,
-			}
-			console.log(model_to_send)
-			this.$store.commit(this.parent_model_name+'/setPropModelToDelete', model_to_send)
-			this.$bvModal.show('delete-'+this.prop.key)
 		}
 	}
 }

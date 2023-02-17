@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	v-if="show_view">
 		
 		<slot name="modals"></slot>
 
@@ -46,12 +47,14 @@
 			cols="12"
 			:xl="col_xl">
 				<list
+				:order_list_by="order_list_by"
 				:check_permissions="check_permissions"
 				:models_to_show="models_to_show"
 				:show_models_if_empty="show_models_if_empty"
 				:show_previus_days="show_previus_days"
 				:show_search_nav="show_search_nav"
-				:model_name="model_name">
+				:model_name="model_name"
+				@clicked="clicked">
 					<template v-slot:default="slotProps">
 						<slot :model="slotProps.model"></slot>
 					</template>
@@ -65,9 +68,7 @@ import Model from '@/common-vue/components/model/Index'
 import List from '@/common-vue/components/view/List'
 import HorizontalNav from '@/common-vue/components/horizontal-nav/Index'
 
-import display from '@/common-vue/mixins/display'
 export default {
-	mixins: [display],
 	components: {
 		Model,
 
@@ -135,14 +136,29 @@ export default {
 		show_models_if_empty: Boolean,
 		check_permissions: {
 			type: Boolean,
-			default: false,
+			default: true,
 		},
 		show_btn_remove_belongs_to_many: {
 			type: Boolean,
 			default: true,
 		},
+		order_list_by: {
+			type: String,
+			default: null,
+		},
+		check_auth: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	computed: {
+		show_view() {
+			if (this.check_auth) {
+				console.log('check_auth: '+this.authenticated)
+				return this.authenticated
+			}
+			return true
+		},
 		can_show_list() {
 			if (this.check_permissions) {
 				return this.can(this.model_name+'.index')
@@ -171,6 +187,10 @@ export default {
 	methods: {
 		modelSaved(model) {
 			this.$emit('modelSaved', model)
+		},
+		clicked(model) {
+			console.log('22222')
+			this.$emit('clicked', model)
 		}
 	}
 }

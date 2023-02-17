@@ -10,9 +10,9 @@
 			<b-col
 			v-for="(prop, index) in properties"
 			v-if="showProperty(prop, model, false, true)"
-			:md="getCol(prop, 6)"
-			:lg="getCol(prop, 4)"
-			:xl="getCol(prop, 3)"
+			:md="getCol(prop, 6, input_full_width)"
+			:lg="getCol(prop, 4, input_full_width)"
+			:xl="getCol(prop, 3, input_full_width)"
 			:key="'model-prop-'+index">
 				<b-form-group
 				:description="prop.description">
@@ -24,7 +24,7 @@
 						<i 
 						v-else
 						class="icon-right"></i>
-						{{ label(prop) }}
+						<strong>{{ label(prop) }}</strong>
 					</label>
 					<div>
 						<images
@@ -46,46 +46,41 @@
 						</p>
 						<div
 						v-else>
+							
 							<div
 							v-if="useSearch(prop)">
 								<search-component
 								class="m-b-15"
 								:id="model_name+'-'+prop.key"
 								@setSelected="setSelected"
-								:model_name="prop.store"
+								:model_name="modelNameFromRelationKey(prop)"
 								:model="model"
-								:show_btn_create="prop.show_btn_create"
+								show_btn_create
 								clear_query
+								:save_if_not_exist="saveIfNotExist(prop)"
 								:prop="prop"></search-component>
-								
-								<div
-								v-if="saving_belongs_to_many && prop.belongs_to_many"
-								class="align-center">
-									<b-spinner small class="m-r-10" variant="primary"></b-spinner>
-									Guardando
-								</div>
 							</div>
 
 
 							<belongs-to-many-checkbox
-							v-if="prop.belongs_to_many && prop.belongs_to_many.with_checkbox"
+							v-if="prop.belongs_to_many && prop.type == 'checkbox'"
 							:model="model"
 							:prop="prop"></belongs-to-many-checkbox>
 
 							<has-many
-							v-if="prop.has_many"
+							v-else-if="prop.has_many"
 							:parent_model="model"
 							:parent_model_name="model_name"
 							:prop="prop"></has-many>
 
 					        <b-form-datepicker
-							v-if="prop.type == 'date'"
+							v-else-if="prop.type == 'date'"
 					        placeholder="Fecha"
 					        :disabled="isDisabled(prop)"
 					        v-model="model[prop.key]"></b-form-datepicker>
 
 							<div
-							v-if="prop.type == 'radio'">
+							v-else-if="prop.type == 'radio'">
 								<b-form-radio
 								v-for="model_radio in modelsToSearch(prop, model)"
 								:key="prop.key+'-'+model_radio.id"
@@ -108,7 +103,7 @@
 							</div>
 
 							<b-form-input
-							v-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
+							v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
 					        :disabled="isDisabled(prop)"
 							:placeholder="'Ingresar '+prop.text"
 							:type="prop.type"
@@ -117,7 +112,7 @@
 							v-model="model[prop.key]"></b-form-input>
 
 							<b-form-textarea
-							v-if="prop.type == 'textarea'"
+							v-else-if="prop.type == 'textarea'"
 					        :disabled="isDisabled(prop)"
 							:placeholder="'Ingresar '+prop.text"
 							:type="prop.type"
@@ -151,25 +146,16 @@
 								</p>
 							</div>
 
-					    	<!-- <model-component
-					    	v-if="prop.show_model"
-					    	:modal_title="'Agregara '+prop.btn_model_text"
-					    	:model="modelStoreFromName(prop.store)"
-					    	:model_name="prop.store"
-					    	:text_delete="prop.text"
-					    	:properties="modelPropertiesFromName(prop.store)"></model-component> -->
-
 							<b-button
-					    	v-if="prop.show_model"
+					    	v-else-if="prop.show_model"
 					    	class="m-r-15"
 					    	@click="setModel(prop)"
 							variant="primary">
 								<i class="icon-plus"></i>
 								{{ btnText(prop) }}
 							</b-button>
-
 							<div
-					    	v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && !prop.belongs_to_many.with_checkbox">
+					    	v-else-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || !prop.type == 'checkbox')">
 								<table-component
 								:loading="false"
 								:models="model[prop.key]"
@@ -178,6 +164,7 @@
 								:pivot="prop.belongs_to_many"
 								:pivot_model="model"
 								:set_model_on_click="false"
+								show_pivot_created_at
 								:show_btn_edit="false">
 									<template v-slot:default="slotProps">
 										<slot name="belongs" :model="slotProps.model"></slot>
@@ -194,7 +181,7 @@
 
 							<p
 							class="function-value"
-							v-if="prop.function">
+							v-else-if="prop.function">
 								{{ getFunctionValue(prop, model) }}
 							</p>
 
@@ -248,12 +235,15 @@
 		v-if="!from_has_many"
 		name="buttons">
 			<btn-loader
+			v-if="hasPermission()"
 			@clicked="save"
 			:loader="loading"
 			text="Guardar"></btn-loader>
 
 			<btn-delete
 			v-if="_show_btn_delete"
+			:has_many_prop="has_many_prop"
+			:has_many_parent_model_name="has_many_parent_model_name"
 			:model_name="model_name"
 			:model="model"
 			:modal="'delete-'+model_name"></btn-delete>
@@ -280,7 +270,8 @@ export default {
 		properties: Array,
 		model_name: String,
 		has_many_parent_model: Object,
-		has_many_prop_name: String,
+		has_many_parent_model_name: String,
+		has_many_prop: Object,
 		check_can_delete: {
 			type: Boolean,
 			default: false,
@@ -326,8 +317,6 @@ export default {
 	},
 	computed: {
 		_show_btn_delete() {
-			console.log('check_permissions:')
-			console.log(this.check_permissions)
 			if (this.check_can_delete || this.check_permissions) {
 				return this.can(this.model_name+'.delete')
 			}
@@ -337,13 +326,7 @@ export default {
 	methods: {
 		useSearch(prop) {
 			return prop.type == 'search'
-			return prop.type == 'search' || (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && !prop.belongs_to_many.with_checkbox && !prop.belongs_to_many.can_not_modify)
-		},
-		getCol(prop, size) {
-			if (this.input_full_width || this.useSearch(prop) || prop.has_many || (prop.belongs_to_many && prop.belongs_to_many.can_not_modify) || prop.type == 'image' || prop.type == 'images') {
-				return 12
-			} 
-			return size
+			return prop.type == 'search' || (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && !prop.type == 'checkbox' && !prop.belongs_to_many.can_not_modify)
 		},
 		removeModel(prop, model) {
 			let index = this.model[prop.key].findIndex(_model => {
@@ -426,34 +409,16 @@ export default {
 			this.$bvModal.show(this.routeString(this.modelNameFromRelationKey(prop)))
 		},
 		label(prop) {
-			// if (prop.type == 'checkbox') {
-			// 	return ''
-			// }
-			return prop.text
+			return this.capitalize(prop.text)
 		},
 		setSelected(result) {
 			console.log(result)
 			let prop = result.prop
 			if (prop.belongs_to_many) {
 				let model_to_add = result.model 
-				if (!model_to_add && prop.belongs_to_many.create_if_not_exist) {
-					this.saving_belongs_to_many = true
-					this.$api.post(prop.store, {
-						name: result.query,
-						status: 'inactive',
-					})
-					.then(res => {
-						model_to_add = res.data.model
-						this.saving_belongs_to_many = false 
-						this.setBelongsToManyPivotProps(prop, model_to_add, result)
-					})
-					.catch(err => {
-						this.saving_belongs_to_many = false 
-						console.log(err)
-					})
-				} else if (model_to_add) {
-					this.setBelongsToManyPivotProps(prop, model_to_add, result)
-				}
+				this.setBelongsToManyPivotProps(prop, model_to_add, result)
+			} else if (prop.has_many && prop.has_many.models_from_parent_prop) {
+				this.model[prop.key].unshift(result.model)
 			} else {
 				this.$set(this.model, result.prop.key, result.model.id)
 				this.$set(this.model, this.modelNameFromRelationKey(result.prop), result.model)
@@ -480,6 +445,7 @@ export default {
 				})
 			}
 			this.model[result.prop.key].unshift(model_to_add)
+			console.log('se agrego')
 		},
 		save() {
 			if (this.check() && !this.loading) {
@@ -492,11 +458,11 @@ export default {
 						this.loading = false 
 						this.$toast.success('Actualizado')
 						if (this.has_many_parent_model) {
-							let index = this.has_many_parent_model[this.has_many_prop_name].findIndex(model => {
+							let index = this.has_many_parent_model[this.has_many_prop.key].findIndex(model => {
 								return model.id == this.model.id 
 							})
 							if (index != -1) {
-								this.has_many_parent_model[this.has_many_prop_name].splice(index, 1, res.data.model)
+								this.has_many_parent_model[this.has_many_prop.key].splice(index, 1, res.data.model)
 							}
 						} else {
 							if (this.model_name == 'user') {
@@ -519,7 +485,7 @@ export default {
 						this.loading = false 
 						this.$toast.success('Guardado')
 						if (this.has_many_parent_model) {
-							this.$set(this.has_many_parent_model, this.has_many_prop_name, this.has_many_parent_model[this.has_many_prop_name].concat([res.data.model]))
+							this.$set(this.has_many_parent_model, this.has_many_prop.key, this.has_many_parent_model[this.has_many_prop.key].concat([res.data.model]))
 						} else {
 							this.$store.commit(this.replaceGuion(this.model_name)+'/add', res.data.model)
 						}
@@ -533,6 +499,17 @@ export default {
 					})
 				}
 			}
+		},
+		hasPermission() {
+			console.log('check_permissions: '+this.check_permissions)
+			if (this.check_permissions) {
+				if (!this.model.id) {
+					return this.can(this.model_name+'.store')
+				} else if (this.model.id) {
+					return this.can(this.model_name+'.update')
+				}
+			}
+			return true 
 		},
 		getModelToSend() {
 			let model_to_send = {
@@ -566,7 +543,7 @@ export default {
 			if (prop.use_to_check_if_is_repeat) {
 				let finded = this.modelsStoreFromName(this.model_name).find(model => {
 					console.log(model[prop.key]+' == '+this.model[prop.key])
-					return model[prop.key].toLowerCase() == this.model[prop.key].toLowerCase()
+					return model[prop.key] && model[prop.key].toLowerCase() == this.model[prop.key].toLowerCase()
 				})
 				if (typeof finded != 'undefined' && (!this.model.id || this.model.id != finded.id)) {
 					this.$toast.error('Ya hay un '+this.singular(this.model_name)+' con este '+prop.text)

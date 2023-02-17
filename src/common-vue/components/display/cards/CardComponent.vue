@@ -59,9 +59,7 @@
 	</div>
 </template>
 <script>
-import display from '@/common-vue/mixins/display'
 export default {
-	mixins: [display],
 	components: {
 		VueLoadImage: () => import('vue-load-image'),
 	},

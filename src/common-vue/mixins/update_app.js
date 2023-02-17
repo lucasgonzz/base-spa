@@ -5,16 +5,16 @@ export default {
 			there_is_update: false,
 		}
 	},
-	watch: {
-		loading() {
-			console.log('se cambio loading')
-		}
-	},
-	computed: {
-		loading() {
-			return this.$store.state.auth.loading
-		},
-	},
+	// watch: {
+	// 	loading() {
+	// 		console.log('se cambio loading')
+	// 	}
+	// },
+	// computed: {
+	// 	loading() {
+	// 		return this.$store.state.auth.loading
+	// 	},
+	// },
 	created() {
         document.addEventListener(
             'swUpdated', this.updateApp, { once: true }

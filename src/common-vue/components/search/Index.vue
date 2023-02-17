@@ -8,56 +8,55 @@
 		:model_name="model_name"
 		:placeholder="_placeholder"
 		:str_limint="str_limint"
+		:preview_results="preview_results"
+		:model="model"
+		:models_to_search="models_to_search"
+		:save_if_not_exist="save_if_not_exist"
 		@setQuery="setQuery"
 		@setSelected="setSelected"></search-modal>
 
 		<div
 		class="search-component">
-			<div class="cont-search">
-				<div 
-				:class="is_disabled ? 'bg-gray' : 'bg-withe'"
-				class="icon">
-					<i class="icon-search"></i>
+			<div class="cont-search-input-btn">
+				<div class="cont-search">
+					<div 
+					:class="is_disabled ? 'bg-gray' : 'bg-withe'"
+					class="icon">
+						<i class="icon-search"></i>
+					</div>
+					<b-form-input
+					:disabled="is_disabled"
+					class="input-search"
+					:id="id"
+					@click="callSearchModal"
+					v-model="query"
+					:placeholder="_placeholder"></b-form-input>
 				</div>
-				<b-form-input
-				:disabled="is_disabled"
-				class="input-search"
-				:id="id"
-				@keyup="callSearchModal"
-				v-model="query"
-				:placeholder="_placeholder"></b-form-input>
+				<btn-create-model
+				v-if="show_btn_create && (!prop.has_many || (prop.has_many && !prop.has_many.models_from_parent_prop))"
+				:model_name="model_name"></btn-create-model>
 			</div>
-			<btn-create-model
-			v-if="show_btn_create"
-			:model_name="model_name"></btn-create-model>
 		</div>
-		<div
-		class="align-center m-t-15"
-		v-if="show_selected && selected_model && prop && !prop.belongs_to_many">
-			<b-button
-			v-if="!is_disabled"
-			size="sm"
-			@click="clearSelected"
-			variant="outline-primary">
-				Limpiar
-			</b-button>
-			<p
-			class="m-b-0 m-l-15">
-				<i class="icon-right"></i>
-				{{ prop.text }} seleccionado: <strong>{{ selected_model.name }}</strong>
-			</p> 
-		</div>
+		<selected-info
+		:is_disabled="is_disabled"
+		:model_name="model_name"
+		:prop="prop"
+		:show_selected="show_selected"
+		:selected_model="selected_model"
+		@clearSelected="clearSelected"></selected-info>
 	</div>
 </template>
 <script>
 import SearchModal from '@/common-vue/components/search/Modal'
 import BtnCreateModel from '@/common-vue/components/search/BtnCreateModel'
 import TableComponent from '@/common-vue/components/display/TableComponent'
+
 export default {
 	components: {
 		SearchModal,
 		BtnCreateModel,
 		TableComponent,
+		SelectedInfo: () => import('@/common-vue/components/search/SelectedInfo'),
 	},
 	props: {
 		id: {
@@ -99,12 +98,21 @@ export default {
 		placeholder: {
 			type: String,
 			default: null,
-		}
+		},
+		show_preview_results: {
+			type: Boolean,
+			default: true,
+		},
+		save_if_not_exist: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	data() {
 		return {
 			query: '',
-			props_to_filter: [],
+			models_to_search: [],
+			preview_results: [],
 			selected_model: null,
 		}
 	},
@@ -121,27 +129,11 @@ export default {
 			}
 			return false
 		},
-		// _placeholder() {
-		// 	if (this.placeholder) {
-		// 		return this.placeholder
-		// 	} else if (this.prop) {
-		// 		return 'Buscar '+this.singular(this.model_name)
-		// 		// return 'Buscar '+this.prop.text.toLowerCase()
-		// 	}
-		// },
 	},
 	created() {
 		this.setSelectedModelProp()
 	},
 	methods: {
-		setSelectedModelProp() {
-			if (this.show_selected) {
-				if (this.model && this.model[this.prop.store]) {
-					this.selected_model = this.model[this.prop.store]
-					this.query = this.model[this.prop.store].name
-				} 
-			} 
-		},
 		clearSelected() {
 			if (this.model) {
 				this.model[this.prop.store] = null
@@ -150,17 +142,56 @@ export default {
 			this.selected_model = null
 			this.query = ''
 		},
+		setPreviewResults() {
+			if (this.show_preview_results) {
+				this.preview_results = this.models_to_search.slice(0, 20)
+			}
+		},
+		setModelsToSearch() {
+			console.log('model_name: '+this.model_name)
+			let models = this.modelsStoreFromName(this.model_name)
+			if (this.prop && this.prop.depends_on && this.model) {
+				models = models.filter(_model => {
+					console.log('model')
+					console.log(this.model)
+					console.log('comparado '+_model[this.prop.depends_on]+' con '+this.model[this.prop.depends_on])
+					return _model[this.prop.depends_on] == this.model[this.prop.depends_on]
+				})
+			} else if (this.prop && this.prop.is_between) {
+				console.log(this.model[this.prop.is_between.parent_model_prop])
+				if (this.model[this.prop.is_between.parent_model_prop] && this.model[this.prop.is_between.parent_model_prop][this.prop.is_between.model_prop].length) {
+					console.log(this.model[this.prop.is_between.parent_model_prop][this.prop.is_between.model_prop])
+					models = this.model[this.prop.is_between.parent_model_prop][this.prop.is_between.model_prop]
+				}
+			} else if (this.prop && this.prop.has_many && this.prop.has_many.models_from_parent_prop) {
+				let model = this.$store.state[this.prop.has_many.models_from_parent_prop.parent_model_name].model 
+				models = model[this.prop.has_many.models_from_parent_prop.models_prop_name]
+			} 
+			this.models_to_search = models 
+			console.log(this.models_to_search) 
+		},
+		setSelectedModelProp() {
+			if (this.show_selected) {
+				if (this.model && this.model[this.modelNameFromRelationKey(this.prop)]) {
+					this.selected_model = this.model[this.modelNameFromRelationKey(this.prop)]
+					if (this.idiom == 'es') {
+						this.query = this.model[this.modelNameFromRelationKey(this.prop)].nombre
+					} else {
+						this.query = this.model[this.modelNameFromRelationKey(this.prop)].name
+					}
+				} 
+			} 
+		},
 		setQuery(value) {
 			this.query = value 
 		},
-		callSearchModal(e) {
-			this.results = []
-			if (this.query.length >= (this.str_limint-1) && e.code != 'Enter' && e.code != 'Backspace') {
-				this.$bvModal.show(this.id+'-search-modal')
-				setTimeout(() => {
-					document.getElementById(this.id+'-search-modal-input').focus()
-				}, 100)
-			}
+		callSearchModal() {
+			this.setModelsToSearch()
+			this.setPreviewResults()
+			this.$bvModal.show(this.id+'-search-modal')
+			setTimeout(() => {
+				document.getElementById(this.id+'-search-modal-input').focus()
+			}, 100)
 		},
 		setSelected(model) {
 			this.selected_model = model 
@@ -173,13 +204,7 @@ export default {
 				this.query = ''
 				console.log('se limpio')
 			}
-			// if (!this.prop.belongs_to_many && !this.clear_query) {
-			// 	// this.query = model.name
-			// } else {
-			// 	console.log('se limpio')
-			// 	this.query = '' 
-			// }
-		}
+		},
 	}
 }
 </script>
@@ -188,7 +213,11 @@ export default {
 .search-component
 	width: 100%
 	// display: flex
+	.cont-search-input-btn
+		display: flex
+		width: 100%
 	.cont-search
+		width: 90%
 		position: relative
 		display: flex
 		flex-direction: row

@@ -30,6 +30,7 @@
 				<b-btn-group
 				class="m-r-15">
 					<b-button
+					v-if="can_filter_modal"
 					variant="outline-primary"
 					v-b-modal="'filter-modal'">
 						<i class="icon-search"></i>
@@ -53,7 +54,7 @@
 					:model_name="model_name"></excel-drop-down>
 
 					<btn-create
-					v-else-if="show_btn_create"
+					v-else-if="show_btn_create && can_create"
 					:with_margin="false"
 					:block="false"
 					:model_name="model_name"></btn-create>
@@ -75,10 +76,8 @@ import FilterModal from '@/common-vue/components/horizontal-nav/FilterModal'
 import ExcelDropDown from '@/common-vue/components/horizontal-nav/ExcelDropDown'
 import DisplayNav from '@/common-vue/components/horizontal-nav/DisplayNav'
 
-import display from '@/common-vue/mixins/display'
 export default {
 	name: 'HorizontalNav',
-	mixins: [display],
 	components: {
 		BtnCreate,
 		FilterModal,
@@ -137,9 +136,18 @@ export default {
 		}
 	},
 	computed: {
+		can_filter_modal() {
+			if (this.show_filter_modal) {
+				if (this.check_permissions) {
+					return this.can(this.model_name+'.index')
+				}
+				return true 
+			}
+			return false
+		},
 		can_create() {
 			if (this.check_permissions) {
-				this.can(this.model_name+'.store')
+				return this.can(this.model_name+'.store')
 			}
 			return true 
 		},
@@ -186,7 +194,9 @@ export default {
 					this.$router.push({params: {view: this.routeString(this.value(item))}})
 				} else if (item.action) {
 					this.$store.dispatch(item.action)
-				} 
+				} else if (item.call_models) {
+					this.$store.dispatch(item.name.replaceAll(' ', '_')+'/getModels')
+				}
 				if (item.commit) {
 					item.commit.forEach(commit => {
 						this.$store.commit(commit)
@@ -200,9 +210,11 @@ export default {
 			if (this.set_sub_view) {
 				if (this.sub_view != this.routeString(this.value(item))) {
 					this.$router.push({params: {method: this.method, sub_view: this.routeString(this.value(item))}})
+				} else if (item.call_models) {
+					this.$store.dispatch(item.name.replaceAll(' ', '_')+'/getModels')
 				} else if (item.action) {
 					this.$store.dispatch(item.action)
-				} if (item.commit) {
+				} else if (item.commit) {
 					this.$store.commit(item.commit)
 				}
 			} 
@@ -238,6 +250,7 @@ export default {
 		flex-direction: row
 		justify-content: flex-start
 		flex-wrap: wrap
+		max-width: 100%
 		@media screen and (max-width: 576px)
 			width: 100%
 			.cont-buttons
@@ -255,10 +268,11 @@ export default {
 	display: flex
 	overflow-x: scroll
 	overflow-y: hidden
-	-ms-overflow-style: none
-	scrollbar-width: none
-	&::-webkit-scrollbar 
-		display: none
+	@media screen and (max-width: 576px)
+		&::-webkit-scrollbar 
+			-ms-overflow-style: none
+			scrollbar-width: none
+			display: none
 	.buttons 
 		display: flex
 

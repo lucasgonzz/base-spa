@@ -95,7 +95,7 @@ export default {
 .login-form
 	img 
 		width: 130px
-		margin-bottom: 1em
+		// margin-bottom: 1em
 	@media screen and (min-width: 768px)
 		background: #FFF
 		padding: 15px

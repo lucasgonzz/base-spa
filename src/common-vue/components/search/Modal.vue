@@ -14,8 +14,7 @@ hide-footer
 		v-model="query"
 		:id="_id+'-search-modal-input'"
 		:placeholder="_placeholder"></b-form-input>
-		<div
-		v-if="query.length >= 3">
+		<div>
 			<div
 			v-if="loading || results.length">
 				<p
@@ -24,6 +23,7 @@ hide-footer
 					Resultados
 				</p>
 				<table-component
+				is_from_search_modal
 				:selected_index="selected_index"
 				select_mode="single"
 				:loading="loading"
@@ -32,6 +32,7 @@ hide-footer
 				:set_model_on_click="false"
 				:show_btn_edit="false"
 				emit_selected_on_row
+				:striped="false"
 				@clicked="setSelected"></table-component>	
 			</div>
 			<div
@@ -40,11 +41,17 @@ hide-footer
 					<i class="icon-search"></i>
 					No se encontraron resultados
 				</div>
-				<!-- <div class="text-with-icon">
+				<div 
+				v-if="prop && save_if_not_exist"
+				class="text-with-icon">
 					<i class="icon-check"></i>
-					ENTER para crear {{ model_name }}
-				</div> -->
+					ENTER para crear {{ singular(model_name) }}
+				</div>
 			</div>
+		</div>
+		<div
+		v-if="saving_if_not_exist">
+			Guardando
 		</div>
 	</div>
 </b-modal>
@@ -58,10 +65,10 @@ export default {
 	props: {
 		_id: String,
 		query_value: String,
-		prop: {
-			type: Object,
-		},
+		prop: Object,
 		model_name: String,
+		model: Object,
+		models_to_search: Array,
 		str_limint: {
 			type: Number,
 			default: 2,
@@ -69,6 +76,13 @@ export default {
 		auto_select: Boolean,
 		placeholder: {
 			type: String,
+		},
+		preview_results: {
+			type: Array,
+		},
+		save_if_not_exist: {
+			type: Boolean,
+			default: true,
 		},
 	},
 	data() {
@@ -80,7 +94,15 @@ export default {
 			results: [],
 			props_to_filter: [],
 			selected_index: -1,
+			saving_if_not_exist: false,
 		}
+	},
+	watch: {
+		preview_results() {
+			console.log('seteando con preview_results')
+			this.results = this.preview_results
+			this.setFirstSelectedRow()
+		},
 	},
 	computed: {
 		modal_id() {
@@ -137,7 +159,7 @@ export default {
 				let results = []
 				this.searching = true
 				this.propsToFilter(this.model_name).forEach(prop => {
-					results = this.modelsStoreFromName(this.model_name).filter(model => {
+					results = this.models_to_search.filter(model => {
 						let value = ''+model[prop.key]
 						return value && value.toLowerCase().includes(this.query.toLowerCase())
 					})
@@ -149,24 +171,33 @@ export default {
 					})
 					this.results = this.results.concat(results)
 				})
+				this.orderAlpabethic()
 				this.searching = false
 				this.interval = null
 				this.loading = false 
-				if (this.auto_select) {
-					setTimeout(() => {
-						this.selected_index = -1
-						setTimeout(() => {
-							this.selected_index = 0
-						}, 100)
-					}, 100)
-				}
+				this.setFirstSelectedRow()
 			}
 		},
-		enterSelect() {
-			console.log(this.selected_index)
+		orderAlpabethic() {
+			this.results = this.results.sort((a, b) => a.name.localeCompare(b.name))
+		},
+		setFirstSelectedRow() {
+			if (this.auto_select) {
+				setTimeout(() => {
+					this.selected_index = -1
+					setTimeout(() => {
+						this.selected_index = 0
+						console.log('se autoselecciono la primer fila')
+					}, 100)
+				}, 100)
+			}
+		},
+		enterSelect() { 
 			if (!this.loading) {
 				if (this.selected_index != -1 && this.results.length) {
 					this.$emit('setSelected', this.results[this.selected_index])
+				} else if (this.save_if_not_exist) {
+					this.saveIfNotExist()
 				} else {
 					this.$emit('setSelected', null)
 				}
@@ -175,6 +206,43 @@ export default {
 			} else {
 				this.$toast.error('Espere a que termine la busqueda, por favor')
 			}
+		},
+		saveIfNotExist() {
+			this.saving_if_not_exist = true
+			let properties_to_set = [] 
+			let property_to_send 
+			if (this.idiom == 'es') {
+				property_to_send = 'nombre'
+			} else {
+				property_to_send = 'name'
+			}
+			if (this.prop && this.prop.save_if_not_exist && this.prop.save_if_not_exist.property_to_send) {
+				property_to_send = this.prop.save_if_not_exist.property_to_send
+			}
+			properties_to_set.push({
+				key: property_to_send,
+				value: this.query,
+			})
+			if (this.prop && this.prop.depends_on) {
+				properties_to_set.push({
+					key: this.prop.depends_on,
+					value: this.model[this.prop.depends_on],
+				})
+			}
+			this.$api.post(`search/save-if-not-exist/${this.model_name}/${property_to_send}/${this.query}`, {
+				properties_to_set
+			})
+			.then(res => {
+				this.saving_if_not_exist = false
+				this.$store.commit(this.model_name+'/add', res.data.model)
+				this.$toast.success(this.singular(this.model_name)+' creado')
+				this.$emit('setSelected', res.data.model)
+			})
+			.catch(err => {
+				this.saving_if_not_exist = false
+				console.log(err)
+				this.$toast.error('Error al guardar '+this.singular(this.model_name))
+			})
 		},
 		selectUp() {
 			if (this.selected_index > 0) {

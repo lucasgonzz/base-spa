@@ -21,9 +21,7 @@
 	</b-dropdown>
 </template>
 <script>
-import display from '@/common-vue/mixins/display'
 export default {
-	mixins: [display],
 	props: {
 		model_name: String,
 	},

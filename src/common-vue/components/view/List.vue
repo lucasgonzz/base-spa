@@ -6,11 +6,13 @@
 		:model_name="model_name"></previus-days>
 
 		<display
+		:order_list_by="order_list_by"
 		:check_permissions="check_permissions"
 		:models="models_to_show"
 		:model_name="model_name"
 		:show_models_if_empty="show_models_if_empty"
 		:properties="properties"
+		@clicked="clicked"
 		:model_name_spanish="model_name_spanish">
 			<template v-slot:default="slotProps">
 				<slot :model="slotProps.model"></slot>
@@ -37,7 +39,11 @@ export default {
 		show_models_if_empty: {
 			type: Boolean,
 			default: false,
-		}
+		},
+		order_list_by: {
+			type: String,
+			default: null,
+		},
 	},
 	computed: {
 		to_show() {
@@ -51,6 +57,12 @@ export default {
 		},
 		properties() {
 			return require(`@/models/${this.model_name}`).default.properties 
+		}
+	},
+	methods: {
+		clicked(model) {
+			console.log('22222')
+			this.$emit('cliecked', model)
 		}
 	},
 	components: {

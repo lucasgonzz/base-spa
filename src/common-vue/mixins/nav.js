@@ -2,6 +2,16 @@ export default {
 	computed: {
 	},
 	methods: {
+		showRoute(route) {
+			let show = true 
+			if (route.can) {
+				show = this.can(route.can)
+			}
+			if (route.check_is_owner) {
+				show = this.is_owner 
+			}
+			return show 
+		},
 		routeText(route) {
 			if (route.text) {
 				return route.text 

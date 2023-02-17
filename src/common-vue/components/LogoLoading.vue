@@ -2,18 +2,22 @@
 	<div
 	v-if="loading"
 	class="container-logo">
-        <img class="logo" src="@/assets/logo.png" alt="">
-        
-        <b-spinner 
-        v-if="!there_is_update"
-        variant="primary"></b-spinner>
-		<b-progress 
-		v-else
-		variant="primary" :value="progress" :max="100" show-progress animated></b-progress>
 
-        <p
-        v-if="message != ''"
-        class="text-loader text-primary">{{ message }}</p>
+		<div 
+		class="animate__animated animate__pulse">
+	        <img class="logo" src="@/assets/logo.png" alt="">
+	        
+	        <b-spinner 
+	        v-if="!there_is_update"
+	        variant="primary"></b-spinner>
+			<b-progress 
+			v-else
+			variant="primary" :value="progress" :max="100" show-progress animated></b-progress>
+
+	        <p
+	        v-if="message != ''"
+	        class="text-loader text-primary">{{ message }}</p>
+		</div>
 	</div>
 </template>
 <script>
@@ -36,24 +40,26 @@ export default {
 	position: fixed
 	width: 100vw
 	height: 100vh
-	z-index: 100
-	// background: rgba(0,0,0,.3)
+	z-index: 10000
 	background: #FFF
-	display: flex
-	flex-direction: column
-	justify-content: center
-	align-items: center
-	.logo
-		margin-bottom: 10px
-		z-index: 100
-		width: 120px
-	.spinner-border
-		width: 20px
-		height: 20px
-	.progress 
-		width: 200px
-	.text-loader
-		font-weight: bold
-		font-size: 1.1em
-		margin-top: 10px
+	div	
+		width: 100vw
+		height: 100vh
+		display: flex
+		flex-direction: column
+		justify-content: center
+		align-items: center
+		.logo
+			margin-bottom: 10px
+			z-index: 100
+			width: 120px
+		.spinner-border
+			width: 20px
+			height: 20px
+		.progress 
+			width: 200px
+		.text-loader
+			font-weight: bold
+			font-size: 1.1em
+			margin-top: 10px
 </style>

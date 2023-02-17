@@ -9,7 +9,6 @@
 	</b-button>
 </template>
 <script>
-import display from '@/common-vue/mixins/display'
 export default {
 	props: {
 		model_name: String,
@@ -23,7 +22,6 @@ export default {
 			default: true,
 		},
 	},
-	mixins: [display],
 	methods: {
 		create() {
 			this.setModel(null, this.model_name)

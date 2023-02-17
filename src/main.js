@@ -50,14 +50,8 @@ import VueCookies from 'vue-cookies'
 Vue.use(VueCookies)
 
 // Mixins
-import dates from './common-vue/mixins/dates'
-Vue.mixin(dates)
-import generals from './common-vue/mixins/generals'
-Vue.mixin(generals)
-import images from './common-vue/mixins/images'
-Vue.mixin(images)
-import model_functions from './mixins/model_functions'
-Vue.mixin(model_functions)
+import app from './common-vue/mixins/app'
+Vue.mixin(app)
 
 
 

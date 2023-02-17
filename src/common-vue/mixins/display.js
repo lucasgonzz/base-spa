@@ -15,22 +15,21 @@ export default {
 				model,
 				properties
 			})
-			console.log('mostrando modal')
+			console.log('mostrando modal: '+model_name)
 			this.$bvModal.show(model_name)
-			console.log('se mostro modal')
 		},
 		getPivotProperties(model, properties) {
 			let properties_to_add = []
 			if (properties) {
 				properties.forEach(prop => {
-					if (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && !prop.belongs_to_many.with_checkbox) {
+					if (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && !prop.type == 'checkbox') {
 						if (!model) {
 							properties_to_add.push({
 								key: prop.key,
 								value: [],
 							})
 						}
-					} else if (prop.belongs_to_many && prop.belongs_to_many.with_checkbox) {
+					} else if (prop.belongs_to_many && prop.type == 'checkbox') {
 						if (!model) {
 							properties_to_add.push({
 								key: prop.key+'_id',
@@ -60,7 +59,7 @@ export default {
 						}
 					} else if (prop.belongs_to_many && prop.belongs_to_many.related_with_all) {
 						if (!model) {
-							let all_models_for_relation = this.modelsStoreFromName(prop.belongs_to_many.model_name)
+							let all_models_for_relation = this.modelsStoreFromName(prop.store)
 							let propertye_to_add = {
 								key: prop.key,
 								value: [], 

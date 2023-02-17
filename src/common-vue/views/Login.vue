@@ -5,7 +5,7 @@
 		cols="12"
 		md="6"
 		lg="5"
-		xl="3">
+		xl="5">
 			<div  
 			class="b-w">
 				<login-form></login-form>

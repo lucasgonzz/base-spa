@@ -38,13 +38,16 @@ shadow>
 </template>
 <script>
 import NavItems from '@/common-vue/components/nav/NavItems'
+import routes from '@/router/routes'
 
 import nav from '@/common-vue/mixins/nav'
 export default {
 	mixins: [nav],
-    props: {
-        routes: Array,
-    },
+	computed: {
+		routes() {
+			return routes
+		},
+	},
 	components: {
 		NavItems,
 	},

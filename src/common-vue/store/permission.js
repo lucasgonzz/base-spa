@@ -7,7 +7,7 @@ import generals from '@/common-vue/mixins/generals'
 export default {
 	namespaced: true,
 	state: {
-		model_name: '',
+		model_name: 'permission',
 		from_dates: false,
 		is_selecteable: false,
 

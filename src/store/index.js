@@ -1,7 +1,9 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 
-import auth from '@/store/auth'
+import auth from '@/common-vue/store/auth'
+import employee from '@/common-vue/store/employee'
+import permission from '@/common-vue/store/permission'
 import product from '@/store/product'
 import sale from '@/store/sale'
 
@@ -16,6 +18,8 @@ export default new Vuex.Store({
     },
     modules: {
         auth,
+        employee,
+        permission,
         product,
         sale,
     }

@@ -19,8 +19,7 @@
             <b-collapse id="nav-collapse" is-nav> 
 
                 <slot name="nav_items">
-                    <nav-items
-                    :routes="routes"></nav-items>
+                    <nav-items></nav-items>
                 </slot>
 
                 <b-navbar-nav 
@@ -56,8 +55,7 @@
                 </b-navbar-nav>
             </b-collapse>
         </b-navbar>
-        <mobile
-        :routes="routes"></mobile>
+        <mobile></mobile>
 
     </div>
 </template>
@@ -68,16 +66,13 @@ import NavItems from '@/common-vue/components/nav/NavItems'
 import nav from '@/common-vue/mixins/nav'
 export default {
     mixins: [nav],
-    props: {
-        routes: Array,
-    },
     components: {
         Mobile,
         NavItems,
     },
     computed: {
         show() {
-            return this.route_name != 'login' && this.route_name != 'passwordReset'
+            return this.authenticated && this.route_name != 'login' && this.route_name != 'passwordReset'
         }
     }
 }

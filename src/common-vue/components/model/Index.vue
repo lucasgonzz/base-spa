@@ -16,7 +16,8 @@
 			@modelSaved="modelSaved"
 			:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
 			:has_many_parent_model="has_many_parent_model"
-			:has_many_prop_name="has_many_prop_name"
+			:has_many_parent_model_name="has_many_parent_model_name"
+			:has_many_prop="has_many_prop"
 			:model="model"
 			:model_name="model_name"
 			:properties="properties"
@@ -59,7 +60,14 @@ export default {
 			type: Object,
 			default: null,
 		},
-		has_many_prop_name: String,
+		has_many_parent_model_name: {
+			type: String,
+			default: null,
+		},
+		has_many_prop: {
+			type: Object,
+			default: null
+		},
 		show_btn_pdf: {
 			type: Boolean,
 			default: false,
@@ -101,7 +109,7 @@ export default {
 		},
 		title() {
 			if (this.model.id) {
-				let text = 'Actualizar '+this.singular(this.model_name)
+				let text = 'Actualizar '+this.singular(this.model_name).toLowerCase()
 				if (this.model.num) {
 					text += ' N° '+this.model.num
 				}

@@ -24,6 +24,9 @@ export default {
         route_name() {
             return this.$route.name
         },
+        idiom() {
+            return process.env.VUE_APP_IDIOM
+        },
         app_name() {
             return process.env.VUE_APP_APP_NAME
         },
@@ -39,8 +42,30 @@ export default {
 		route_index() {
             return process.env.VUE_APP_ROUTE_INDEX
 		},
+		route_to_redirect_if_unauthenticated() {
+            return process.env.VUE_APP_ROUTE_TO_REDIRECT_IF_UNAUTHENTICATED
+		},
 	},
 	methods: {
+		saveIfNotExist(prop) {
+			if (prop.save_if_not_exist == false) {
+				return false 
+			}
+			return true
+		},
+		getCol(prop, size, input_full_width = false) {
+			// if (this.input_full_width || this.useSearch(prop) || prop.has_many || (prop.belongs_to_many && prop.belongs_to_many.can_not_modify) || prop.type == 'image' || prop.type == 'images') {
+			if (input_full_width || prop.has_many || prop.belongs_to_many || prop.type == 'images') {
+				return 12
+			} 
+			return size
+		},
+		marginBtn(model_name) {
+			if (this.$store.state[model_name].display == 'cards') {
+				return 'm-l-15 m-r-15 m-b-15'
+			}
+			return 'm-l-10'
+		},
 		getBorderColorProperty(model_name) {
 			let prop = this.modelPropertiesFromName(model_name).find(prop => {
 				return prop.use_to_set_border_color
@@ -130,6 +155,22 @@ export default {
 			})
 			if (to_filter.length) {
 				return to_filter
+			} else {
+				if (this.idiom == 'en') {
+					return [
+						{
+							key: 'name',
+							text: 'Nombre',
+						}
+					]
+				} else if (this.idiom == 'es') {
+					return [
+						{
+							key: 'nombre',
+							text: 'Nombre',
+						}
+					]
+				}
 			}
 			return props
 		},
@@ -204,9 +245,13 @@ export default {
 				let prop_name = 'name'
 				if (prop.relation_prop_name) {
 					prop_name = prop.relation_prop_name
+				} else if (this.idiom == 'es') {
+					prop_name = 'nombre'
 				}
 				if (model[relationship]) {
 					return model[relationship][prop_name] 
+				} else {
+					return 'S/A'
 				}
 			}
 			if (from_pivot) {
@@ -236,6 +281,23 @@ export default {
 			}
 			if (prop.is_price) {
 				return this.price(model[prop.key]) 
+			}
+			if (prop.type == 'search') {
+				console.log(prop.text+' ENTRO A TIPE SEARCH')
+				console.log(model[prop.key])
+				console.log(typeof model[prop.key])
+				if (typeof model[prop.key] == 'array') {
+					return model[prop.key].length 
+				} else if (typeof model[prop.key] == 'object' && model[prop.key]) {
+					if (this.idiom == 'es') {
+						return model[prop.key].nombre
+					} else {
+						return model[prop.key].name
+					}
+				} 
+			}
+			if (prop.belongs_to_many) {
+				return ''
 			}
 			return model[prop.key] 
 		},
@@ -272,29 +334,55 @@ export default {
 			return plural
 		},
 		getOptions(prop, model = null, model_name = null) {
-			let store = prop.key.substring(0, prop.key.length-3)
+			let store 
+			if (prop.store) {
+				store = prop.store
+			} else {
+				store = prop.key.substring(0, prop.key.length-3)
+			}
 			let models = this.$store.state[store].models
 			let prop_name = 'name'
+			if (this.idiom == 'en') {
+				prop_name = 'name'
+			} else {
+				prop_name = 'nombre'
+			}
 			if (prop.select_prop_name) {
 				prop_name = prop.select_prop_name
 			} 
+
 			let options = []
 			options.push({
 				value: 0, text: 'Seleccione '+prop.text 
 			})
 			if (prop.options_from_selected_model_prop) {
 				console.log('model_name: '+model_name)
+				console.log('prop.options_from_selected_model_prop: '+prop.options_from_selected_model_prop)
+				console.log('model: ')
+				console.log(model)
 				let selected_model = this.$store.state[model_name].selected_model
-				models = selected_model[prop.options_from_selected_model_prop]
+				if (selected_model) {
+					models = selected_model[prop.options_from_selected_model_prop]
+				} else if (prop.options_from_prop) {
+					let _model_name = prop.options_from_prop.split('.')[0]
+					let _prop = prop.options_from_prop.split('.')[1]
+					console.log('_model_name:' +_model_name)
+					console.log('_prop:' +_prop)
+					console.log('models:')
+					let _model = this.$store.state[_model_name].models.find(_model => {
+						return _model.id == model[_model_name+'_id']
+					})
+					models = _model[_prop]
+					console.log(models)
+				}
 			}
 			if (prop.depends_on && model) {
-				console.log(model)
 				models = models.filter(_model => {
 					return _model[prop.depends_on] == model[prop.depends_on]
 				})
 			} 
-			console.log(prop)
 			models.forEach(item => {
+				
 				let text = item[prop_name] 
 				if (prop.select_text_to_add) {
 					text += prop.select_text_to_add

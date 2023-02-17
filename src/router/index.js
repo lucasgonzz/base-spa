@@ -19,6 +19,16 @@ const routes = [
         name: 'configuration',
         component: () => import('@/common-vue/views/Configuration')
     },
+    // {
+    //     path: '/abm/:view?',
+    //     name: 'abm',
+    //     component: () => import('@/common-vue/views/Abm')
+    // },
+    {
+        path: '/empleados',
+        name: 'employee',
+        component: () => import('@/common-vue/views/Employee')
+    },
     
     {
         path: '/productos',
@@ -26,7 +36,7 @@ const routes = [
         component: () => import('@/views/Product')
     },
     {
-        path: '/vetas',
+        path: '/ventas',
         name: 'sale',
         component: () => import('@/views/Sale')
     },

@@ -1,7 +1,7 @@
 <template>
 	<b-modal
-	title="Buscar"
-	hide-footer
+	:title="'Buscar '+singular(model_name).toLowerCase()"
+	scrollable
 	id="filter-modal">
 		<p>
 			<strong>
@@ -18,8 +18,8 @@
 				class="m-b-15"
 				:id="model_name+'-'+filter.key"
 				@setSelected="setSelected"
-				:model_name="filter.store"
-				:model="filter"
+				:model_name="modelNameFromRelationKey(filter)"
+				:model="model_for_pass_to_search"
 				:prop="filter"></search-component>
 			</b-form-group>
 
@@ -86,20 +86,24 @@
 
 		</div>
 
-		<b-form-checkbox
-		class="m-b-15"
-		v-model="clear_filter"
-		:value="1"
-		:uunchecked-value="0">
-			Limpiar filtro
-		</b-form-checkbox>
+		<template #modal-footer>
+			<!-- <div 
+			class="j-start w-100 m-b-15">
+				<b-form-checkbox
+				v-model="clear_filter"
+				:value="1"
+				:unchecked-value="0">
+					Limpiar filtro
+				</b-form-checkbox>
+			</div> -->
 
-		<b-button
-		variant="primary"
-		@click="search"
-		block>
-			Buscar
-		</b-button>
+			<b-button
+			variant="primary"
+			@click="search"
+			block>
+				Buscar
+			</b-button>
+		</template>
 	</b-modal>
 </template>
 <script>
@@ -114,28 +118,28 @@ export default {
 	data() {
 		return {
 			filters: [],
+			props: [],
 			filter_model: {},
 			select_options: {},
 			clear_filter: 1,
+			model_for_pass_to_search: {},
 		}
 	},
-	computed: {
-		props() {
-			return this.propsToFilterInModal(this.model_name)
+	watch: {
+		model_name() {
+			this.initProps()
+			this.initFilter()
 		},
-		// filters() {
-		// 	let filters = this.$store.state[this.model_name].filters
-		// 	if (typeof filters != 'undefined') {
-		// 		return filters 
-		// 	} 
-		// 	return this._filters
-		// }
 	},
 	created() {	
+		this.initProps()
 		this.initFilter()
 		this.setSelectOptions()
 	},
 	methods: {
+		initProps() {
+			this.props = this.propsToFilterInModal(this.model_name)
+		},
 		search() {
 			this.$store.commit(this.model_name+'/setLoading', true)
 			this.$store.commit(this.model_name+'/setFromDate', '')
@@ -156,7 +160,7 @@ export default {
 			})
 		},
 		clearFilter() {
-			if (this.clear_filter) {
+			// if (this.clear_filter) {
 				this.filters.forEach(filter => {
 					if (filter.type == 'search') {
 						filter.value = 0
@@ -164,9 +168,11 @@ export default {
 						filter.value = ''
 					}
 				})
-			}
+			// }
 		},
 		initFilter() {	
+			this.filters = []
+			let index = 0
 			this.props.forEach(prop => {
 				if (prop.type == 'number') {
 					this.filters.push({
@@ -220,6 +226,8 @@ export default {
 						value: 0,
 					})
 				}
+				// this.model_for_pass_to_search[prop.key] = this.filters[index].value 
+				index++
 			})
 		},
 		setSelectOptions() {
@@ -229,12 +237,12 @@ export default {
 					this.$set(this.select_options, filter.key, this.getOptions({key: filter.key, text: filter.label, depends_on: filter.depends_on}, this.filter_model))
 				}
 			})
-			console.log(this.filter_model)
-			console.log(this.select_options)
 		},
 		setSelected(result) {
-			console.log(result)
 			result.prop.value = result.model.id
+			this.filters.forEach(filter => {
+				this.model_for_pass_to_search[filter.key] = filter.value 
+			})
 		},
 	}
 }

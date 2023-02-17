@@ -6,10 +6,10 @@
 			<div
 			v-if="models.length">
 				<b-table
-				class="s-2 b-r-5 animate__animated animate__fadeIn"
+				class="s-2 b-r-1 animate__animated animate__fadeIn"
 				head-variant="dark"
 				responsive
-				striped
+				:striped="striped"
 				:fields="fields"
 				:items="items"
 				hover 
@@ -74,23 +74,15 @@
 						</span>
 					</template>
 
-					<template #cell(created_at)="data">
-						{{ date(models[data.index].created_at) }}
+					<template #cell(pivot_created_at)="data">
+						{{ date(models[data.index].pivot.created_at) }}
 					</template>
 
 					<template #cell(edit)="data">
 						<div class="cont-edit">
 							<slot 
 							name="btn-edit"
-							:model="models[data.index]">
-								<!-- <b-button
-								v-if="show_btn_edit"
-								size="sm"
-								@click="clicked(models[data.index])"
-								variant="primary">
-									<i class="icon-edit"></i>
-								</b-button> -->
-							</slot>
+							:model="models[data.index]"></slot>
 
 							<div
 							class="cont-pivot-inputs"
@@ -169,9 +161,7 @@
 import VueLoadImage from 'vue-load-image'
 import BtnAddToShow from '@/common-vue/components/BtnAddToShow'
 
-import display from '@/common-vue/mixins/display'
 export default {
-	mixins: [display],
 	components: {
 		VueLoadImage,
 		BtnAddToShow,
@@ -226,6 +216,18 @@ export default {
 			type: Object,
 			default: null,
 		},
+		striped: {
+			type: Boolean,
+			default: true,
+		},
+		is_from_search_modal: {
+			type: Boolean,
+			default: false,
+		},
+		show_pivot_created_at: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -249,6 +251,9 @@ export default {
 		columns() {
 			let props = this.propertiesToShow(this.properties, true)
 			if (props.length) {
+				if (props.length > 6) {
+					return 6
+				}
 				return props.length
 			}
 			return 2
@@ -278,10 +283,12 @@ export default {
 			// 		})
 			// 	})
 			// }
-			fields.push({
-				key: 'created_at',
-				label: 'Creado',
-			})
+			if (this.show_pivot_created_at) {
+				fields.push({
+					key: 'pivot_created_at',
+					label: 'Agregado',
+				})
+			}
 			fields.push({
 				key: 'edit',
 				label: '',
@@ -334,11 +341,21 @@ export default {
 			return _class
 		},
 		onRowSelected(items) {
-			if (this.select_mode == 'single' && items.length) {
+			if (this.select_mode == 'single' && items.length && !this.is_from_search_modal) {
 				let model = this.models.find(_model => {
 					return _model.id == items[0].id
 				})
-				this.setModel(model, this.model_name, this.properties)
+				this.$store.commit('auth/setMessage', 'Cargando formulario')
+				this.$store.commit('auth/setLoading', true)
+				setTimeout(() => {
+					this.$emit('clicked', model)
+					this.setModel(model, this.model_name, this.properties)
+					this.$refs.tableComponent.clearSelected()
+					setTimeout(() => {
+						this.$store.commit('auth/setLoading', false)
+						this.$store.commit('auth/setMessage', '')
+					}, 100)
+				}, 100)
 			} else if (!this.isTheSameSelection(items) && !this.is_from_keydown) {
 				if (this.set_selected_models) {
 					let items_to_set = []
