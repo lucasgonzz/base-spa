@@ -15,7 +15,7 @@
 			variant="link"
 			@click="setModel(selected_model, model_name)">
 				<i class="icon-right"></i>
-				{{ selected_model.name ? selected_model.name : selected_model.nombre }}
+				{{ selected_model_name }}
 			</b-button>
 		</div>
 	</div>
@@ -28,6 +28,15 @@ export default {
 		show_selected: Boolean, 
 		selected_model: Object,
 		is_disabled: Boolean,
+	},
+	computed: {
+		selected_model_name() {
+			if (this.selected_model) {
+				let prop_key = this.propToFilter(this.model_name).key
+				return this.selected_model[prop_key]
+			}
+			return null
+		},
 	},
 	methods: {
 		clearSelected() {

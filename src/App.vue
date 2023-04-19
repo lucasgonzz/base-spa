@@ -12,16 +12,25 @@
 import LogoLoading from '@/common-vue/components/LogoLoading'
 import NavComponent from '@/components/nav/Index'
 
-import update_app from '@/common-vue/mixins/update_app'
 import app from '@/common-vue/mixins/app'
+import call_methods from '@/mixins/call_methods'
 export default {
-    mixins: [update_app, app],
+    mixins: [app], 
     components: {
         LogoLoading, 
         NavComponent,
     },
     created() {
-        this.$store.dispatch('auth/me')
+        this.$store.dispatch('auth/me') 
+        .then(() => {
+            if (!this.authenticated) {
+                if (this.route_name != 'login' && !this.use_home_page) {
+                    this.$router.replace({name: 'login'})
+                } else if (this.route_name != 'login' && this.route_name != 'home') {
+                    this.$router.replace({name: 'home'})
+                }
+            }
+        })
     },
     watch: {
         authenticated() {
@@ -30,16 +39,12 @@ export default {
                     this.$router.replace({name: 'login'})
                 } 
             } else {
-                this.hasPermissionForRoute()
-                this.callMethods([
-                    'product',
-                    'permission',
-                ])
+                this.checkPermissionForCurrentRoute()
+                this.callMethods(call_methods)
+                this.listenChannels()
             }
         }
     },
-    methods: {
-    }
 }
 </script>
 <style lang="sass">

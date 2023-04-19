@@ -28,7 +28,12 @@ export default {
 			type: String,
 			default: null,
 		},
-		actions: Array,
+		actions: {
+			type: Array,
+			default: () => {
+				return []
+			}
+		},
 		id: String,
 		toast: {
 			type: String,
@@ -69,20 +74,19 @@ export default {
 				console.log('emitiendo '+this.emit)
 				this.$emit(this.emit)
 				this.$bvModal.hide(this.id)
-			} else {
-				let action_index = 0
-				this.loading = true
-				while (this.actions[action_index] !== undefined) {
-					let res = await this.$store.dispatch(this.actions[action_index])
-					action_index++
-					if (this.actions[action_index] === undefined) {
-						this.loading = false
-						this.$toast.success(this.toast)
-						this.$bvModal.hide(this.id)
-						this.$bvModal.hide(this.model_name)
-					}
-					
+			}
+			let action_index = 0
+			this.loading = true
+			while (this.actions.length && this.actions[action_index] !== undefined) {
+				let res = await this.$store.dispatch(this.actions[action_index])
+				action_index++
+				if (this.actions[action_index] === undefined) {
+					this.loading = false
+					this.$toast.success(this.toast)
+					this.$bvModal.hide(this.id)
+					this.$bvModal.hide(this.model_name)
 				}
+				
 			}
 		},
 	}

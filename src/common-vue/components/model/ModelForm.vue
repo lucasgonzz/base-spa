@@ -31,24 +31,35 @@
 						v-if="prop.type == 'image' || prop.type == 'images'"
 						:prop="prop"
 						:model="model"
-						:model_name="model_name"></images>
-						<p
-						v-if="prop.only_show"
-						class="m-b-0 m-l-25">
-							<strong 
-							v-if="propText(model, prop) != ''">
-								{{ propText(model, prop) }}
-							</strong>
-							<span
-							v-else>
-								No hay
-							</span>
-						</p>
+						:model_name="model_name"
+						:has_many_parent_model="has_many_parent_model"
+						:has_many_prop="has_many_prop"></images>
 						<div
 						v-else>
+							<p
+							v-if="prop.only_show"
+							class="m-b-0 m-l-25">
+								<strong 
+								v-if="propertyText(model, prop) != ''">
+									{{ propertyText(model, prop) }}
+								</strong>
+								<span
+								v-else>
+									No hay
+								</span>
+							</p>
 							
 							<div
-							v-if="useSearch(prop)">
+							v-else-if="useSearch(prop)">
+								<!-- <search-component
+								class="m-b-15"
+								@setSelected="setSelected"
+								:model_name="modelNameFromRelationKey(prop)"
+								:model="model"
+								show_btn_create
+								clear_query
+								:save_if_not_exist="saveIfNotExist(prop)"
+								:prop="prop"></search-component> -->
 								<search-component
 								class="m-b-15"
 								:id="model_name+'-'+prop.key"
@@ -63,7 +74,7 @@
 
 
 							<belongs-to-many-checkbox
-							v-if="prop.belongs_to_many && prop.type == 'checkbox'"
+							v-else-if="prop.belongs_to_many && prop.type == 'checkbox'"
 							:model="model"
 							:prop="prop"></belongs-to-many-checkbox>
 
@@ -105,16 +116,15 @@
 							<b-form-input
 							v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
 					        :disabled="isDisabled(prop)"
-							:placeholder="'Ingresar '+prop.text"
+							:placeholder="'Ingresar '+propText(prop)"
 							:type="prop.type"
-							@keyup.enter="save"
-							@keyup="checkIsRepeat(prop)"
+							@keyup.enter="clieckEnter(prop)"
 							v-model="model[prop.key]"></b-form-input>
 
 							<b-form-textarea
 							v-else-if="prop.type == 'textarea'"
 					        :disabled="isDisabled(prop)"
-							:placeholder="'Ingresar '+prop.text"
+							:placeholder="'Ingresar '+propText(prop)"
 							:type="prop.type"
 							v-model="model[prop.key]"></b-form-textarea>
 
@@ -131,8 +141,13 @@
 							v-model="model[prop.key]"
 							:value="1"
 							:unchecked-value="0">
-								{{ prop.text }}
+								{{ propText(prop) }}
 							</b-form-checkbox>
+
+							<google-geocoder
+							v-else-if="prop.type == 'google_geocoder'"
+							:prop="prop"
+							:model="model"></google-geocoder>
 
 							<div
 							v-else-if="prop.type == 'boolean'">
@@ -149,13 +164,14 @@
 							<b-button
 					    	v-else-if="prop.show_model"
 					    	class="m-r-15"
-					    	@click="setModel(prop)"
+					    	@click="_setModel(prop)"
 							variant="primary">
 								<i class="icon-plus"></i>
 								{{ btnText(prop) }}
 							</b-button>
+
 							<div
-					    	v-else-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || !prop.type == 'checkbox')">
+					    	v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')">
 								<table-component
 								:loading="false"
 								:models="model[prop.key]"
@@ -163,7 +179,7 @@
 								:model_name="prop.store"
 								:pivot="prop.belongs_to_many"
 								:pivot_model="model"
-								:set_model_on_click="false"
+								:set_model_on_row_selected="false"
 								show_pivot_created_at
 								:show_btn_edit="false">
 									<template v-slot:default="slotProps">
@@ -192,6 +208,10 @@
 							@click="clear(prop)">
 								Limpiar
 							</b-button>
+							<p
+							v-if="prop.prop_info">
+								{{ propInfo(prop) }}
+							</p>
 						</div>
 
 						<!-- <hr> -->
@@ -235,11 +255,11 @@
 		v-if="!from_has_many"
 		name="buttons">
 			<btn-loader
-			v-if="hasPermission()"
+			v-if="hasPermission"
 			@clicked="save"
 			:loader="loading"
 			text="Guardar"></btn-loader>
-
+			
 			<btn-delete
 			v-if="_show_btn_delete"
 			:has_many_prop="has_many_prop"
@@ -308,22 +328,37 @@ export default {
 			type: Array,
 			default: () => []
 		},
+		hasPermission: {
+			type: Boolean,
+			default: true,
+		},
+	},
+	created() {
+		// console.log('se creo modelForm')
+		this.setPropsToShowInBelongsToMany()
 	},
 	data() {
 		return {
 			loading: false,
 			saving_belongs_to_many: false,
+			props_to_show_in_belongs_to_many: [],
 		}
 	},
 	computed: {
 		_show_btn_delete() {
-			if (this.check_can_delete || this.check_permissions) {
+			if (this.show_btn_delete && (this.check_can_delete || this.check_permissions)) {
 				return this.can(this.model_name+'.delete')
 			}
 			return this.show_btn_delete
 		},
 	},
 	methods: {
+		propInfo(prop) {
+			let array = prop.prop_info.model_prop.split('.')
+			if (this.model[array[0]] && this.model[array[0]][array[1]]) {
+				return prop.prop_info.text+' '+this.model[array[0]][array[1]]
+			}
+		},
 		useSearch(prop) {
 			return prop.type == 'search'
 			return prop.type == 'search' || (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && !prop.type == 'checkbox' && !prop.belongs_to_many.can_not_modify)
@@ -334,12 +369,59 @@ export default {
 			})
 			this.model[prop.key].splice(index, 1)
 		},
-		propsToShowInBelongsToMany(prop) {
-			if (prop.belongs_to_many.props_to_show) {
-				return prop.belongs_to_many.props_to_show 
-			}
-			return this.modelPropertiesFromName(prop.store)
+		setPropsToShowInBelongsToMany() {
+			console.log('setPropsToShowInBelongsToMany')
+			this.properties.forEach(prop => {
+				if (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')) {
+					let to_show 
+					if (prop.belongs_to_many.props_to_show) {
+						to_show = prop.belongs_to_many.props_to_show
+					} else {
+						to_show = this.modelPropertiesFromName(prop.store)
+					}
+					if (prop.belongs_to_many.pivot_props_to_show) {
+						let map = prop.belongs_to_many.pivot_props_to_show.map(_prop => {
+							return {
+								..._prop,
+								from_pivot: true,
+							}
+						})
+						to_show = to_show.concat(map)
+					}
+					this.props_to_show_in_belongs_to_many.push({
+						prop_key: prop.key,
+						to_show,
+					}) 
+				}
+			})
+			console.log('props_to_show_in_belongs_to_many')
+			console.log(this.props_to_show_in_belongs_to_many)
 		},
+		propsToShowInBelongsToMany(prop) {
+			return this.props_to_show_in_belongs_to_many.find(_prop => {
+				return _prop.prop_key == prop.key 
+			}).to_show
+		},
+		// propsToShowInBelongsToMany(prop) {
+		// 	let to_show 
+		// 	if (prop.belongs_to_many.props_to_show) {
+		// 		to_show = prop.belongs_to_many.props_to_show
+		// 	} else {
+		// 		to_show = this.modelPropertiesFromName(prop.store)
+		// 	}
+		// 	if (prop.belongs_to_many.pivot_props_to_show) {
+		// 		let map = prop.belongs_to_many.pivot_props_to_show.map(_prop => {
+		// 			return {
+		// 				..._prop,
+		// 				from_pivot: true,
+		// 			}
+		// 		})
+		// 		to_show = to_show.concat(map)
+		// 	}
+		// 	console.log('to_show')
+		// 	console.log(to_show)
+		// 	return to_show
+		// },
 		isDisabled(prop) {
 			if (prop.disabled && !this.form_to_filter) {
 				return true 
@@ -394,9 +476,9 @@ export default {
 			if (prop.btn_model_text) {
 				return 'Agregar '+prop.btn_model_text
 			}
-			return 'Agregar '+prop.text
+			return 'Agregar '+this.propText(prop)
 		},
-		setModel(prop) {
+		_setModel(prop) {
 			let properties = []
 			prop.properties.forEach(_prop => {
 				properties.push({
@@ -409,7 +491,7 @@ export default {
 			this.$bvModal.show(this.routeString(this.modelNameFromRelationKey(prop)))
 		},
 		label(prop) {
-			return this.capitalize(prop.text)
+			return this.capitalize(this.propText(prop))
 		},
 		setSelected(result) {
 			console.log(result)
@@ -444,8 +526,16 @@ export default {
 					}
 				})
 			}
-			this.model[result.prop.key].unshift(model_to_add)
+			this.$set(this.model, prop.key, this.model[prop.key].concat([model_to_add]))
+			// this.model[prop.key].unshift(model_to_add)
 			console.log('se agrego')
+		},
+		clieckEnter(prop) {
+			if (prop.use_to_check_if_is_repeat) {
+				this.checkIsRepeat(prop)
+			} else {
+				this.save()
+			}
 		},
 		save() {
 			if (this.check() && !this.loading) {
@@ -472,7 +562,7 @@ export default {
 							}
 						}
 						this.$bvModal.hide(this.model_name)
-						this.callActions()
+						this.callActions(res.data.model)
 					})
 					.catch(err => {
 						console.log(err)
@@ -490,7 +580,7 @@ export default {
 							this.$store.commit(this.replaceGuion(this.model_name)+'/add', res.data.model)
 						}
 						this.$bvModal.hide(this.model_name)
-						this.callActions()
+						this.callActions(res.data.model)
 					})
 					.catch(err => {
 						console.log(err)
@@ -500,17 +590,17 @@ export default {
 				}
 			}
 		},
-		hasPermission() {
-			console.log('check_permissions: '+this.check_permissions)
-			if (this.check_permissions) {
-				if (!this.model.id) {
-					return this.can(this.model_name+'.store')
-				} else if (this.model.id) {
-					return this.can(this.model_name+'.update')
-				}
-			}
-			return true 
-		},
+		// hasPermission() {
+		// 	console.log('check_permissions: '+this.check_permissions)
+		// 	if (this.check_permissions) {
+		// 		if (!this.model.id) {
+		// 			return this.can(this.model_name+'.store')
+		// 		} else if (this.model.id) {
+		// 			return this.can(this.model_name+'.update')
+		// 		}
+		// 	}
+		// 	return true 
+		// },
 		getModelToSend() {
 			let model_to_send = {
 				...this.model
@@ -529,10 +619,10 @@ export default {
 			this.properties.forEach(prop => {
 				if (prop.required) {
 					if (ok && prop.type == 'select' && this.model[prop.key] == 0) {
-						this.$toast.error('Ingrese '+prop.text)
+						this.$toast.error('Ingrese '+this.propText(prop))
 						ok = false
 					} else if (ok && this.model[prop.key] == '') {
-						this.$toast.error('Ingrese '+prop.text)
+						this.$toast.error('Ingrese '+this.propText(prop))
 						ok = false
 					}
 				} 
@@ -542,23 +632,24 @@ export default {
 		checkIsRepeat(prop) {
 			if (prop.use_to_check_if_is_repeat) {
 				let finded = this.modelsStoreFromName(this.model_name).find(model => {
-					console.log(model[prop.key]+' == '+this.model[prop.key])
 					return model[prop.key] && model[prop.key].toLowerCase() == this.model[prop.key].toLowerCase()
 				})
 				if (typeof finded != 'undefined' && (!this.model.id || this.model.id != finded.id)) {
-					this.$toast.error('Ya hay un '+this.singular(this.model_name)+' con este '+prop.text)
+					this.$toast.warning('Ya hay un '+this.singular(this.model_name)+' con este '+this.propText(prop))
+					this.setModel(finded, this.model_name)
 				}
 			} 
 		},
-		callActions() {
+		callActions(model) {
 			this.actions_after_save.forEach(action => {
 				this.$store.dispatch(action)
 			})
-			this.$emit('modelSaved', this.model)
+			this.$emit('modelSaved', model)
 		}
 	},
 	components: {
 		ModelComponent: () => import('@/common-vue/components/model/Index'),
+		GoogleGeocoder: () => import('@/common-vue/components/model/google-geocoder/Index'),
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
 		HasMany,
 		BelongsToManyCheckbox,

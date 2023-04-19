@@ -6,6 +6,7 @@ import update_app from '@/common-vue/mixins/update_app'
 import permissions from '@/common-vue/mixins/permissions'
 import display from '@/common-vue/mixins/display'
 import model_functions from '@/common-vue/mixins/model_functions'
+import broadcast from '@/common-vue/mixins/broadcast'
 import _model_functions from '@/mixins/model_functions'
 export default {
     mixins: [
@@ -16,9 +17,10 @@ export default {
         permissions,
         display,
         model_functions,
+        broadcast,
         _model_functions,
     ],
-	methods: {
+    methods: {
         redirectIfWww() {
             if (location.href.indexOf("www.") > -1) {
                 console.log('tiene www')
@@ -41,5 +43,5 @@ export default {
                 this.$store.commit('auth/setMessage', message)
             }
         },
-	}
+    }
 }
