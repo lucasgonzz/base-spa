@@ -9,13 +9,14 @@
 				class="s-2 b-r-1 animate__animated animate__fadeIn"
 				head-variant="dark"
 				responsive
-				:striped="striped"
+				:striped="_striped"
 				:fields="fields"
 				:items="items"
-				hover 
+				:hover="hover" 
 				selectable 
 				ref="tableComponent"
 				:select-mode="_select_mode"
+				:tbody-tr-class="rowClass"
 				@row-selected="onRowSelected">
 					<template 
 					v-for="prop in properties"
@@ -62,12 +63,16 @@
 							</p>
 						</div>
 						<b-button
-						v-else-if="prop.button"
+						v-else-if="showProperty(prop, models[data.index]) && prop.button"
 						:variant="prop.button.variant"
 						@click="callMethod(prop, models[data.index])">
 							<i
 							v-if="prop.button.icon"
 							:class="'icon-'+prop.button.icon"></i>
+							<span
+							v-else-if="prop.button.button_text">
+								{{ prop.button.button_text }}
+							</span>
 							<span
 							v-else>
 								{{ propertyText(models[data.index], prop) }}
@@ -87,11 +92,19 @@
 						</span>
 					</template>
 
-					<template #cell(created_at)="data">
+					<template #cell(updated_at)="data">
 						<span>
-							{{ date(models[data.index].created_at) }}
+							{{ date(models[data.index].updated_at) }}
 						</span>
 					</template>
+
+					<!-- <template 
+					v-for="(prop, index) in propsToSet()"
+					v-slot:[toCellName(prop.key)]="data">
+						<table-pivot-props-to-set
+						:prop="prop"
+						:model="models[data.index]"></table-pivot-props-to-set>
+					</template> -->
 
 					<template #cell(pivot_created_at)="data">
 						<span
@@ -99,6 +112,7 @@
 							{{ date(models[data.index].pivot.created_at) }}
 						</span>
 					</template>
+
 
 					<template #cell(edit)="data">
 						<div class="cont-edit">
@@ -153,6 +167,13 @@
 									size="sm">
 										{{ propText(prop) }}
 									</b-button>
+									<div
+									v-else-if="prop.function">
+										<p>
+											{{ prop.text }}
+										</p>
+										{{ getFunctionValue(prop, models[data.index]) }}
+									</div>
 								</div>
 							</div>
 							<slot :model="models[data.index]"></slot>
@@ -163,18 +184,35 @@
 				:model_name="model_name"></btn-add-to-show> -->
 			</div>
 			<p 
-			v-else-if="!models.length && model_name"
+			v-else-if="!models.length && model_name && (!is_mobile || downloadOnMobile(model_name))"
 			class="text-with-icon">
 				<i class="icon-eye-slash"></i>
 				No hay {{ plural(model_name) }}
 			</p>
+			<div
+			v-else>
+				<p 
+				class="text-with-icon">
+					<i class="icon-exclamation"></i>
+					No se descargaron {{ plural(model_name) }} para optimizar el rendimiento en este dispositivo
+				</p>
+				<p>
+					Si lo prefiere, puede descargarlos
+				</p>
+				<b-button
+				@click="download"
+				block
+				variant="primary">
+					Descargar {{ plural(model_name) }}
+				</b-button>
+			</div>
 		</div>
 		<b-skeleton-table
 		class="s-2 b-r-1 animate__animated animate__fadeIn"
 		v-else
 		:rows="10" 
 		:columns="columns"
-		:table-props="{ bordered: true, striped: true }"
+		:table-props="skeleton_props"
 		></b-skeleton-table>
 	</div>
 </template>
@@ -186,6 +224,7 @@ export default {
 	components: {
 		VueLoadImage,
 		BtnAddToShow,
+		TablePivotPropsToSet: () => import('@/common-vue/components/display/TablePivotPropsToSet'),
 	},
 	props: {
 		loading: {
@@ -245,6 +284,14 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		show_created_at: {
+			type: Boolean,
+			default: true,
+		},
+		hover: {
+			type: Boolean,
+			default: true
+		},
 	},
 	data() {
 		return {
@@ -266,6 +313,21 @@ export default {
 		},
 	},
 	computed: {
+		skeleton_props() {
+			if (this.theme_dark) {
+				return { bordered: false, striped: false }
+			}
+			return { bordered: true, striped: true }
+		},
+		_striped() {
+			if (!this.striped) {
+				return false
+			}
+			if (this.app_theme == 'light') {
+				return true
+			}
+			return false
+		},
 		columns() {
 			let props = this.propertiesToShow(this.properties, true)
 			if (props.length) {
@@ -292,19 +354,20 @@ export default {
 		},
 		fields() {
 			let fields = []
-			console.log(this.propertiesToShow(this.properties, true))
 			this.propertiesToShow(this.properties, true).forEach(prop => {
 				fields.push({
 					key: prop.key,
-					label: this.propText(prop),
+					label: this.propText(prop, true, true),
 					sortable: prop.sortable,
 				})
 			})
 
-			fields.push({
-				key: 'created_at',
-				label: 'Creado',
-			})
+			if (this.show_created_at) {
+				fields.push({
+					key: 'updated_at',
+					label: 'Actualizado',
+				})
+			}
 
 			if (this.show_pivot_created_at) {
 				fields.push({
@@ -312,6 +375,16 @@ export default {
 					label: 'Agregado',
 				})
 			}
+			// if (this.pivot && this.pivot.properties_to_set) {
+			// 	this.pivot.properties_to_set.forEach(prop => {
+			// 		fields.push({
+			// 			key: prop.key,
+			// 			function: prop.function,
+			// 			button: prop.button,
+			// 			label: prop.text,
+			// 		})
+			// 	})
+			// }
 			fields.push({
 				key: 'edit',
 				label: '',
@@ -332,20 +405,28 @@ export default {
 						item[prop.key] = this.propertyText(model, prop)
 					}
 				})
-				item._rowVariant = this.hasColor(model)
+				item._rowVariant = this.getColor(model)
 				items.push(item)
 			})
 			return items
 		},
 	},
 	methods: {
+		rowClass(item, type) {
+			if (this.model_name && this.hasColor(this.model_name)) {
+				return this[this.model_name+'GetColor'](this.models.find(model => model.id == item.id))
+			}
+		},
+		download() {
+			this.$store.dispatch(this.model_name+'/getModels')
+		},
 		width(prop) {
 			if (prop.table_width && prop.table_width == 'lg') {
 				return 'width-300'
 			}
 			return ''
 		},
-		hasColor(model) {
+		getColor(model) {
 			if (this.model_name) {
 				let prop = this.getBorderColorProperty(this.model_name)
 				if (prop && model[this.modelNameFromRelationKey(prop)]) {
@@ -356,23 +437,8 @@ export default {
 			}
 			return ''
 		},
-		getInputSize(prop) {
-			let _class = 'input-'
-			if (prop.size) {
-				if (prop.size == 'sm') {
-					_class += 'sm'
-				} else if (prop.size == 'md') {
-					_class += 'md'
-				} else if (prop.size == 'lg') {
-					_class += 'lg'
-				}
-			} else {
-				_class += 'md'
-			}
-			return _class
-		},
 		onRowSelected(items) {
-			console.log('this.is_from_keydown: '+this.is_from_keydown)
+			console.log('items.length: '+items.length)
 			if (!this.is_from_keydown) {
 				if (this._select_mode == 'single' && items.length) {
 					console.log(1)
@@ -384,6 +450,8 @@ export default {
 						this.$refs.tableComponent.clearSelected()
 						this.setModel(model, this.model_name)
 					}
+				} else if (this._select_mode == 'single' && !items.length) {
+					this.$emit('onRowSelected', this.models[0])
 				} else if (this._select_mode == 'multi' && !this.isTheSameSelection(items) && !this.is_from_keydown) {
 					console.log(2)
 					if (this.set_selected_models) {
@@ -408,24 +476,25 @@ export default {
 		},
 		propsToSet() {
 			let props = []
-			this.pivot.properties_to_set.forEach(prop => {
-				if (!prop.can || (prop.can && this.can(prop.can))) {
-					if (prop.from_store) {
-						let models = this.modelsStoreFromName(prop.store)
-						models.forEach(model => {
-							props.push({
-								type: prop.type,
-								text: model.name,
-								key: prop.store+'_'+model.id,
-								size: prop.size,
+			if (this.pivot) {
+				this.pivot.properties_to_set.forEach(prop => {
+					if (!prop.can || (prop.can && this.can(prop.can))) {
+						if (prop.from_store) {
+							let models = this.modelsStoreFromName(prop.store)
+							models.forEach(model => {
+								props.push({
+									type: prop.type,
+									text: model.name,
+									key: prop.store+'_'+model.id,
+									size: prop.size,
+								})
 							})
-						})
-					} else {
-						props.push(prop)
+						} else {
+							props.push(prop)
+						}
 					}
-				}
-			})
-			console.log(props)
+				})
+			}
 			return props 
 		},	
 		toCellName(slot) {
@@ -444,20 +513,6 @@ export default {
 		},
 		showBtn(prop, model) {
 			return prop.button_to
-		},
-		callMethod(prop, item) {
-			if (prop.commit) {
-				this.$store.commit(prop.commit, item)
-			}
-			if (prop.modal) {
-				this.$bvModal.show(prop.modal)
-			}
-			if (prop.button && prop.button.emit) {
-				this.$emit(prop.button.emit, item)
-			}
-			if (prop.button && prop.button.function) {
-				this.getFunctionValue(prop.button, item)
-			}
 		},
 		// clicked(model) {
 		// 		console.log(1)
@@ -480,17 +535,83 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/sass/_custom.scss'
 .table 
-	background: #FFF
+	// background: #FFF
 	img 
 		width: 100px
 	input, textarea
 		width: 200px
 	th, td 
 		text-align: left
+		white-space: nowrap
+		@if ($table_font_small)
+			font-size: 1em
+			padding: 5px !important
+
+	tr
+		@if ($theme == 'dark')
+			color: rgb(189, 189, 189)
+			&:hover, &:active 
+				border: 2px solid $blue !important
+				& > td 
+					color: rgb(189, 189, 189) !important
+					background-color: rgba(0,0,0,.8) !important
+ 
+		@else
+			color: #000
+			&:hover, &:active 
+				border: 2px solid $blue !important
+				& > td 
+					color: #000 !important
+					background-color: #999999 !important
+
+	.b-table-row-selected 
+		border: 2px solid $blue !important
+		td 
+			@if ($theme == 'dark')
+				color: rgb(189, 189, 189) !important
+				background-color: rgba(0,0,0,.8) !important
+			@else 
+				// color: rgb(189, 189, 189) !important
+				background-color: #999999 !important
+
+
+	// th, td 
+	// 	white-space: nowrap
+	// 	font-weight: bold
+	// 	text-align: left
+		
+		th 
+			padding: 10px 15px
+			font-size: 17px
+			position: sticky
+			top: 0px
+			@if ($theme == 'dark')
+				color: rgb(189, 189, 189)
+				background: #2C2C2C
+				border-right: 1px solid rgba(255,255,255,.2)
+				border-bottom: 1px solid rgba(255,255,255,.2)
+				&:last-child(2)
+					border-right: 0 !important
+			@else
+				background: rgb(189, 189, 189)
+
+
+		td 
+			padding: 5px 15px
+			line-height: 25px
+			@if ($theme == 'dark')
+				background: #3E3E3E
+				border-bottom: 1px solid rgba(255,255,255,.2)
+			@else
+				background: rgb(189, 189, 189)
+				
+
 	.width-300
 		display: inline-block
 		width: 300px
+
 	.cont-edit 
 		display: flex
 		flex-direction: row

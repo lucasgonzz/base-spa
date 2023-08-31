@@ -6,18 +6,31 @@ hide-footer
 	<b-form-group
 	v-for="prop in form"
 	:label="prop.label">
-		<b-form-input
-		v-if="prop.type == 'number'"
-		:placeholder="prop.placeholder"
-		v-model="prop.value"></b-form-input>
+		<div
+		v-if="prop.type == 'number'">
+			<b-form-input
+			:placeholder="prop.placeholder"
+			v-model="prop.value"></b-form-input>
+
+			<b-form-checkbox
+			class="m-t-10"
+			v-if="typeof prop.round != 'undefined'"
+			v-model="prop.round"
+			:value="1"
+			:unchecked-value="0">
+				Redondear
+			</b-form-checkbox>
+		</div>
 
 		<b-form-select
-		v-else="prop.type == 'select'"
+		v-else-if="prop.type == 'select'"
 		v-model="prop.value"
-		:options="getOptions(prop)"></b-form-select>
+		@chenge="setChange"
+		:options="getOptions(prop, form, prop.store)"></b-form-select>
 
 		<search-component
-		v-else="prop.type == 'search'"
+		v-else-if="prop.type == 'search'"
+		:id="prop.store+'-'+prop.key"
 		:model_name="modelNameFromRelationKey(prop)"
 		:prop="prop"
 		@setSelected="setSelected"></search-component>
@@ -55,6 +68,10 @@ export default {
 		update() {
 			this.$emit('update', this.form)
 		},
+		setChange(value) {
+			console.log('setChange')
+			console.log(value)
+		},
 		setForm() {
 			this.properties_to_update.forEach(prop => {
 				if ((prop.type_to_update && prop.type_to_update == 'number') || prop.type == 'number') {
@@ -64,6 +81,7 @@ export default {
 						type: 'number',
 						placeholder: 'Porcentaje para disminuir '+this.propText(prop),
 						value: '',
+						round: 0,
 					})
 					this.form.push({
 						label: 'Aumentar el '+this.propText(prop),
@@ -71,6 +89,7 @@ export default {
 						type: 'number', 
 						placeholder: 'Porcentaje para aumentar '+this.propText(prop),
 						value: '',
+						round: 0,
 					})
 					this.form.push({
 						label: 'Setear el '+this.propText(prop),
@@ -82,8 +101,9 @@ export default {
 				} else if (prop.type == 'select') {
 					this.form.push({
 						label: this.propText(prop),
-						key: prop.key,
-						store: prop.store,
+						key: prop.key, 
+						store: this.modelNameFromRelationKey(prop),
+						depends_on: prop.depends_on,
 						type: 'select',
 						value: 0,
 					})
@@ -92,15 +112,25 @@ export default {
 					this.form.push({
 						label: this.propText(prop),
 						store: prop.store,
+						depends_on: prop.depends_on,
 						key: prop.key,
 						type: 'search',
 						value: '',
 					})
+					console.log('search para '+prop.key)
 					// this.form[prop.key] = '' 
 				}
 			})
 			console.log('form:')
 			console.log(this.form)
+		},
+		setSelected(result) {
+			let index = this.form.findIndex(form => {
+				return form.key == result.prop.key  
+			})
+			this.form[index].value = result.model.id 
+			console.log(this.form[index])
+			
 		}
 	}
 }

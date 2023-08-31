@@ -1,7 +1,7 @@
 <template>
 	<b-button
 	:size="size"
-	@click="clicked"
+	@click.stop="clicked"
 	:block="block"
 	:variant="variant">
 		<span 
@@ -41,11 +41,15 @@ export default {
 		size: {
 			type: String,
 			default: 'md',
-		}
+		},
+		prop_to_send_on_emit: {
+			type: Object,
+			default: null
+		},
 	},
 	methods: {
 		clicked() {
-			this.$emit('clicked')
+			this.$emit('clicked', this.prop_to_send_on_emit)
 		}
 	}
 }

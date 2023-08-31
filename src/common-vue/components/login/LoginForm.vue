@@ -67,6 +67,8 @@ export default {
 					if (res.data.login) {
 						this.$store.commit('auth/setAuthenticated', true)
 						this.$store.commit('auth/setUser', res.data.user)
+					} else if (res.data.user_last_activity) {
+						this.$toast.error('Su cuenta esta siendo utilizada en otro dispositivo, cierre la cuenta en el otro dispositivo. En caso de que la cuenta no este siendo utilizada en el otro dispositivo, espere '+this.user_last_activity_minutes+' minutos')
 					} else {
 						this.$toast.error('Sus credenciales son incorrectas')
 					}
@@ -99,13 +101,17 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/sass/_custom'
 .login-form
 	img 
 		width: 130px
 		// margin-bottom: 1em
 	@media screen and (min-width: 768px)
-		background: #FFF
+		@if ($theme == 'dark')
+			background: #333
+		@else 
+			background: #FFF
 		padding: 15px
 		border-radius: 5px
-		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
+		// box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
 </style>

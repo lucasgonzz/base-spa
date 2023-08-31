@@ -4,22 +4,8 @@
 	:class="_class"
 	:style="style"
 	class="card-component s-2 c-p s animate__animated animate__fadeIn">
-		<vue-load-image
-		v-if="hasImage(properties)">
-			<img
-			slot="image"
-			class="slide-img" 
-			:src="getImageUrl(properties, model)" 
-			:alt="app_name+'-'+model.name">
-	        <b-spinner
-			slot="preloader"
-	        variant="primary"></b-spinner>
-			<div slot="error">
-				Imagen no encontrada
-			</div>
-		</vue-load-image>
 		<div 
-		v-else-if="titles.length"
+		v-if="!hasImage(properties) && titles.length"
 		class="title">
 			<p
 			v-for="title in titles">
@@ -32,43 +18,59 @@
 				{{ propertyText(model, title) }}
 			</p>
 		</div>
-		<div
-		class="cont-props">
-			<p
-			v-for="prop in propertiesToShow(properties, false)"
-			v-if="showProperty(prop, model, true)">
-				{{ propText(prop) }}
-				<strong>
-					{{ propertyText(model, prop) }}
-				</strong>
-			</p>
+		<div>
+			<vue-load-image
+			v-if="hasImage(properties)">
+				<img
+				slot="image"
+				class="slide-img" 
+				:src="getImageUrl(properties, model)" 
+				:alt="app_name+'-'+model.name">
+		        <b-spinner
+				slot="preloader"
+		        variant="primary"></b-spinner>
+				<div slot="error">
+					Imagen no encontrada
+				</div>
+			</vue-load-image>
 			<div
-			v-if="_show_created_at">
-				<p>
-					Creado:
+			class="cont-props">
+				<p
+				v-for="prop in propertiesToShow(properties, false)"
+				v-if="showProperty(prop, model, true)">
+					{{ propText(prop) }}
 					<strong>
-						{{ date(model.created_at) }}
+						{{ propertyText(model, prop) }}
 					</strong>
 				</p>
+				<div
+				v-if="_show_created_at">
+					<p>
+						Creado:
+						<strong>
+							{{ date(model.created_at) }}
+						</strong>
+					</p>
+				</div>
+				<p>
+					{{ since(model.created_at) }}
+				</p>
 			</div>
-			<p>
-				{{ since(model.created_at) }}
-			</p>
+			<div
+			v-if="pivot && pivot.properties_to_set">
+				<b-form-group
+				v-for="(prop, index) in pivot.properties_to_set"
+				:key="'pivot-prop-'+index"
+				:label="propText(prop)">
+					<b-form-input
+					:type="prop.type"
+					:placeholder="'Ingrese '+propText(prop)"
+					v-model="model.pivot[prop.key]"></b-form-input>
+					<hr>
+				</b-form-group>
+			</div>
+			<slot name="table_right_options" v-bind:model="model"></slot>
 		</div>
-		<div
-		v-if="pivot && pivot.properties_to_set">
-			<b-form-group
-			v-for="(prop, index) in pivot.properties_to_set"
-			:key="'pivot-prop-'+index"
-			:label="propText(prop)">
-				<b-form-input
-				:type="prop.type"
-				:placeholder="'Ingrese '+propText(prop)"
-				v-model="model.pivot[prop.key]"></b-form-input>
-				<hr>
-			</b-form-group>
-		</div>
-		<slot v-bind:model="model"></slot>
 	</div>
 </template>
 <script>
@@ -129,7 +131,8 @@ export default {
 				if (this.on_click_set_property) {
 					this.setModel(this.model[this.on_click_set_property], this.model_name, this.properties)
 				} else {
-					this.setModel(this.model, this.model_name, this.properties)
+					// this.setModel(this.model, this.model_name, this.properties)
+					this.setModel(this.model, this.model_name)
 				}
 			} else {
 				this.$emit('clicked', this.model)
@@ -154,6 +157,7 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/sass/_custom.scss'
 .card-component
 	@media screen and (max-width: 576px)
 		width: 98%
@@ -167,8 +171,8 @@ export default {
 	display: flex
 	flex-direction: row  
 	margin: 1em 1%
-	background: #FFF
 	border-radius: 12px
+	background: #FFF
 	.title 
 		font-size: 30px 
 		font-weight: bold
@@ -179,18 +183,22 @@ export default {
 		align-items: center
 		padding: 0 10px
 		p 
+			color: #333 !important
 			display: flex
 			flex-direction: row
 			line-height: 25px
 			.prop-text
 				font-size: 14px
 				padding-right: 5px
-	img 
+	.vue-load-image
 		width: 100%
-		border-radius: 5px 5px 0 0 
+		img 
+			width: 100%
+			border-radius: 5px 5px 0 0 
 	.cont-props
 		padding: 1em
 		p 
+			color: #333 !important
 			text-align: left
 			margin-bottom: 0
 </style>

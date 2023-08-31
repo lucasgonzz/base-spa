@@ -17,8 +17,10 @@
 		:models_to_search="models_to_search"
 		:save_if_not_exist="save_if_not_exist"
 		:show_btn_create="show_btn_create"
+		:search_from_api="search_from_api"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
+		@setNotShowModel="setNotShowModel"
 		@setSelected="setSelected"></search-modal>
 
 		<div
@@ -92,6 +94,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		search_from_api: {
+			type: Boolean,
+			default: false,
+		},
 		show_selected: {
 			type: Boolean,
 			default: true,
@@ -108,6 +114,10 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		clear_query_on_model_change: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -115,6 +125,7 @@ export default {
 			models_to_search: [],
 			preview_results: [],
 			selected_model: null,
+			not_show_modal: false,
 		}
 	},
 	computed: {
@@ -131,24 +142,35 @@ export default {
 			return false
 		},
 	},
+	watch: {
+		model() {
+			this.setSelectedModelProp()
+		},
+	},
 	created() {
 		this.setSelectedModelProp()
 	},
 	methods: {
+		setNotShowModel(value) {
+			this.not_show_modal = value
+		},
 		modelSaved(model) {
 			if (this.prop.is_between) {
 				if (this.prop.is_between.parent_model_prop) {
+					console.log('modelSaved')
+					console.log('model:')
+					console.log(this.model)
+					console.log('prop:')
+					console.log(this.prop)
 					let index = this.model[this.prop.is_between.parent_model_prop][this.prop.is_between.model_prop].findIndex(_model => {
 						return _model.id == model.id 
 					})
 					if (index == -1) {
 						this.$set(this.model[this.prop.is_between.parent_model_prop], this.prop.is_between.model_prop, this.model[this.prop.is_between.parent_model_prop][this.prop.is_between.model_prop].concat([model]))
-						console.log('se agrego')
 					} else {
 						let models = this.model[this.prop.is_between.parent_model_prop][this.prop.is_between.model_prop]
 						models.splice(index, 1, model)
 						this.$set(this.model[this.prop.is_between.parent_model_prop], this.prop.is_between.model_prop, models)
-						console.log('se actualizo')
 					}
 				} else if (this.prop.is_between.store) {
 					let index = this.$store.state[this.prop.is_between.store].models.findIndex(_model => {
@@ -156,11 +178,9 @@ export default {
 					})
 					if (index == -1) {
 						this.$set(this.$store.state[this.prop.is_between.store].models[index], this.prop.is_between.model_prop, this.$store.state[this.prop.is_between.store].models[index][this.prop.is_between.model_prop].concat([model]))
-						console.log('se agrego')
 					} else {
 						let models = this.$store.state[this.prop.is_between.store].models[index][this.prop.is_between.model_prop].splice(index, 1, model)
 						this.$set(this.model[this.prop.is_between.parent_model_prop], this.prop.is_between.model_prop, models)
-						console.log('se actualizo')
 					}
 				}
 			}
@@ -184,15 +204,11 @@ export default {
 			}
 		},
 		setModelsToSearch() {
-			console.log('setModelsToSearch') 
-			let models = []
+			let models = []		
 			if (this.prop && this.prop.depends_on && this.model) {
 				if (!this.prop.search_depends_on_from_api) {
 				 	models = this.modelsStoreFromName(this.model_name)
 					models = models.filter(_model => {
-						console.log('model')
-						console.log(this.model)
-						console.log('comparado '+_model[this.prop.depends_on]+' con '+this.model[this.prop.depends_on])
 						return _model[this.prop.depends_on] == this.model[this.prop.depends_on]
 					})
 				}
@@ -203,12 +219,8 @@ export default {
 					} 
 				} else if (this.prop.is_between.store && this.model[this.prop.is_between.store+'_id']) {
 					let model = this.$store.state[this.prop.is_between.store].models.find(_model => {
-						console.log('comparado '+_model.id+' con '+this.model[this.prop.is_between.store+'_id'])
 						return _model.id == this.model[this.prop.is_between.store+'_id']
 					})
-					console.log('is_between.store')
-					console.log(model)
-					console.log(model[this.prop.is_between.model_prop])
 					models = model[this.prop.is_between.model_prop]
 				}
 			} else if (this.prop && this.prop.has_many && this.prop.has_many.models_from_parent_prop) {
@@ -218,40 +230,40 @@ export default {
 				models = this.modelsStoreFromName(this.model_name)
 			}
 			this.models_to_search = models 
-			console.log(this.models_to_search) 
 		},
 		setSelectedModelProp() {
 			if (this.show_selected) {
-				if (this.model && this.model[this.prop.key]) {
+				if (this.prop && this.prop.set_model_on_click_or_prop_with_query_if_null) {
+					this.query = this.model[this.prop.key]
+					this.selected_model = null
+				} else if (this.model && this.model[this.prop.key]) {
 					if (this.prop.use_store_models) {
-						console.log('entrooo')
 						let model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
 							return _model.id == this.model[this.prop.key]
 						})
-						console.log(model)
 						this.selected_model = model
 					} else {
 						this.selected_model = this.model[this.modelNameFromRelationKey(this.prop)]
 					}
-					// this.selected_model = this.model[this.modelNameFromRelationKey(this.prop)]
-					// if (this.idiom == 'es') {
-					// 	this.query = this.model[this.modelNameFromRelationKey(this.prop)].nombre
-					// } else {
-					// 	this.query = this.model[this.modelNameFromRelationKey(this.prop)].name
-					// }
 				} 
 			} 
+			if (this.clear_query_on_model_change) {
+				console.log('clear_query_on_model_change')
+				this.query = ''
+			}
 		},
 		setQuery(value) {
 			this.query = value 
 		},
 		callSearchModal() {
-			this.setModelsToSearch()
-			this.setPreviewResults()
-			this.$bvModal.show(this.id+'-search-modal')
-			setTimeout(() => {
-				document.getElementById(this.id+'-search-modal-input').focus()
-			}, 100)
+			if (!this.not_show_modal) {
+				this.setModelsToSearch()
+				this.setPreviewResults()
+				this.$bvModal.show(this.id+'-search-modal')
+				setTimeout(() => {
+					document.getElementById(this.id+'-search-modal-input').focus()
+				}, 100)
+			}
 		},
 		setSelected(model) {
 			this.selected_model = model 
@@ -262,7 +274,7 @@ export default {
 			})
 			if (this.clear_query) {
 				this.query = ''
-				console.log('se limpio')
+				console.log('se limpio query')
 			}
 		},
 	}
@@ -277,7 +289,7 @@ export default {
 		display: flex
 		width: 100%
 	.cont-search
-		width: 90%
+		width: 100%
 		position: relative
 		display: flex
 		flex-direction: row
@@ -295,6 +307,10 @@ export default {
 		border-radius: 0.25rem 0 0 0.25rem
 		i
 			color: rgba(0, 0, 0, .6)
+		@if ($theme == 'dark') 
+			background: #333 !important
+			i
+				color: #FFF
 	.bg-gray 
 		background: #e9ecef !important
 	.input-search

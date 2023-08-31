@@ -9,11 +9,12 @@
 			size="sm"
 			@click="clearSelected"
 			variant="outline-primary">
+				<i class="icon-cancel"></i>
 				Limpiar selección
 			</b-button>
 			<b-button
 			variant="link"
-			@click="setModel(selected_model, model_name)">
+			@click="setModel(selected_model_to_show, model_name)">
 				<i class="icon-right"></i>
 				{{ selected_model_name }}
 			</b-button>
@@ -30,6 +31,15 @@ export default {
 		is_disabled: Boolean,
 	},
 	computed: {
+		selected_model_to_show() {
+			let model = this.modelsStoreFromName(this.model_name).find(_model => {
+				return _model.id == this.selected_model.id 
+			})
+			if (typeof model != 'undefined') {
+				return model 
+			}
+			return this.selected_model
+		},
 		selected_model_name() {
 			if (this.selected_model) {
 				let prop_key = this.propToFilter(this.model_name).key

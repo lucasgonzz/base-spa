@@ -7,7 +7,7 @@ export default {
 			}
 		},
 		setModel(model, model_name, properties_to_override = [], show_modal = true) {
-			let properties = this.getSelectProps(model, model_name)
+			let properties = this.getSelectAndCheckboxProps(model, model_name)
 			properties = properties.concat(this.getPivotProperties(model, model_name))
 			properties = this.overrideProperties(properties, properties_to_override)
 			// console.log(properties)
@@ -30,11 +30,16 @@ export default {
 				}
 			}, 100)
 		},
-		getSelectProps(model, model_name) {
+		getSelectAndCheckboxProps(model, model_name) {
 			let properties = []
 			if (!model) {
 				this.modelPropertiesFromName(model_name).forEach(prop => {
 					if (prop.type == 'select' && !prop.value) {
+						properties.push({
+							...prop,
+							value: 0,
+						})
+					} else if (prop.type == 'checkbox' && !prop.value) {
 						properties.push({
 							...prop,
 							value: 0,
@@ -96,9 +101,19 @@ export default {
 							key: prop.key,
 							value: [], 
 						}
+						console.log('all_models_for_relation')
+						console.log(all_models_for_relation)
 						all_models_for_relation.forEach(model_to_relation => {
 							propertye_to_add.value.push(this.getRelationToAdd(model, prop, model_to_relation))
 						})
+						properties_to_add.push(propertye_to_add)
+					}
+				} else if (prop.type == 'images') {
+					if (!model) {
+						let propertye_to_add = {
+							key: prop.key,
+							value: [], 
+						}
 						properties_to_add.push(propertye_to_add)
 					}
 				}
@@ -110,7 +125,6 @@ export default {
 			return properties_to_add
 		},
 		getRelationToAdd(model, prop, model_to_relation) {
-			console.log('agregando '+model_to_relation.name)
 			let model_relation_to_add = {
 				...model_to_relation,
 			}
