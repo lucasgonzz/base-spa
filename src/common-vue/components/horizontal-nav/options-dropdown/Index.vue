@@ -102,6 +102,7 @@ export default {
 					this.$store.commit(this.model_name+'/delete')
 				})
 				this.$toast.success(this.plural(this.model_name)+' eliminados')
+				this.$store.commit(this.model_name+'/setSelected', [])
 				this.$bvModal.hide('update-props')
 			})
 			.catch(err => {
